@@ -23,11 +23,11 @@ We are building a movie recommendation application that helps the user discover 
 ## 4. Program Logic (Step-by-Step)
 *Describe the path our code takes from start to finish. Use a numbered list to show the sequence of events.*
 
-1. **Initialization:** [e.g., We will import our modules and set up our global variables.]
-2. **Input Phase:** [e.g., We will prompt the user for their starting stats.]
-3. **Processing Phase:** [e.g., We will calculate the outcome of the user's choices using our logic functions.]
-4. **Output Phase:** [e.g., We will print the results to the screen for the user to see.]
-5. **Loop/Cleanup:** [e.g., We will ask if they want to play again or exit to the menu.]
+1. **Initialization:** We will start by importing any needed modules and set up global variables
+2. **Input Phase:** We will prompt the user to enter their preferred genres to watch and movies they have already watched
+3. **Processing Phase:** We will process the user's answers and compare it to the database of movies. We will write a program that filters movies already watched and choose movies that match their interest
+4. **Output Phase:** We will display a personalised list of recommended movies
+5. **Loop/Cleanup:** We will ask the user if they want more recommendations/ update their preferences/ exit the application
 
 ## 5. Team Responsibility Breakdown
 *How are we dividing the work? Each member should have a primary area of focus.*
@@ -46,14 +46,14 @@ We are building a movie recommendation application that helps the user discover 
 
 ## 7. Data Storage & Structures
 *How are we keeping track of information?*
-* **Variables/Collections:** [e.g., We will use a List to store the inventory and a Dictionary for player stats.]
-* **Persistence:** [e.g., We will save the team's progress in a file called `save_data.txt`.]
+* **Variables/Collections:** We will store movie collections in lists and we will store more detailed information in dictionaries such as genre, rating, release year. Viewing history will be stored in a list, so the program can avoid giving the same movies. User preferences will be stored in dictionaries so that reommendations can be personalised in detail
+* **Persistence:** We store data in an external JSON/ CSV file
 
 ## 8. Development Timeline (Milestones)
 *What is our plan for finishing on time?*
-1. **Milestone 1:** [Date] - We will have the basic project structure and main menu working.
-2. **Milestone 2:** [Date] - We will have our individual modules connected and talking to each other.
-3. **Milestone 3:** [Date] - We will finish testing for bugs and submit the final version.
+1. **Milestone 1:** [15.3] - We will have the basic project structure and main menu working.
+2. **Milestone 2:** [28.3] - We will have our individual modules connected and talking to each other.
+3. **Milestone 3:** [30.4] - We will finish testing for bugs and submit the final version.
 
 ---
 
