@@ -23,7 +23,7 @@ We are building a movie recommendation application that helps the user discover 
 ## 4. Program Logic (Step-by-Step)
 *Describe the path our code takes from start to finish. Use a numbered list to show the sequence of events.*
 
-1. **Initialization:** We will start by importing any needed modules and set up global variables
+1. **Initialization:** We will start by importing any needed modules and set up global variables that are to be used by the terminal only.
 2. **Input Phase:** We will prompt the user to enter their preferred genres to watch and movies they have already watched
 3. **Processing Phase:** We will process the user's answers and compare it to the database of movies. We will write a program that filters movies already watched and choose movies that match their interest
 4. **Output Phase:** We will display a personalised list of recommended movies
@@ -40,7 +40,8 @@ We are building a movie recommendation application that helps the user discover 
 ## 6. Module & Function Breakdown
 *List the main parts of our code and which team member is responsible for them.*
 
-* **`main.py`**: The entry point that ties all our work together. (Handled by: [Name])
+* **`main.py`**: The entry point that ties all our work together. (Handled by: [Lewis])
+* **`tmdb_client.py`**: The file that deals with the TMDB API using HTTP requests. (Handled by: [Lewis])
 * **`logic_module.py`**: Functions for the "math" or "rules" of the project. (Handled by: [Name])
 * **`storage_module.py`**: Functions for reading/writing files. (Handled by: [Name])
 
@@ -51,9 +52,9 @@ We are building a movie recommendation application that helps the user discover 
 
 ## 8. Development Timeline (Milestones)
 *What is our plan for finishing on time?*
-1. **Milestone 1:** [15.3] - We will have the basic project structure and main menu working.
-2. **Milestone 2:** [28.3] - We will have our individual modules connected and talking to each other.
-3. **Milestone 3:** [30.4] - We will finish testing for bugs and submit the final version.
+1. **Milestone 1:** [11.3] - We will have the basic project structure and main menu working.
+2. **Milestone 2:** [25.3] - We will have our individual modules connected and talking to each other.
+3. **Milestone 3:** [8.4] - We will finish testing for bugs and submit the final version.
 
 ---
 
