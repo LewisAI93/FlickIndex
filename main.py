@@ -1,4 +1,4 @@
-from tmdb_client import search_by_title, search_by_actor, search_related_movies
+from tmdb_client import search_by_title, search_by_actor, search_by_director, search_related_movies, search_by_genre
 
 def movie_list(movie):
     title = movie.get("title", "Unknown title")
@@ -53,7 +53,9 @@ while True:
     print("-------------------")
     print("1. Search by movie")
     print("2. Search by actor")
-    print("3. Quit")
+    print("3. Search by director")
+    print("4. Search by genre")
+    print("5. Quit")
     print("-------------------")
     user_input = input("Choose a numbered option: ")
 
@@ -99,14 +101,44 @@ while True:
                 name = person.get("name", "Unknown name")
                 known_for_list = person.get("known_for", [])
 
-            if known_for_list:
-                print(f"\n{name} is known for:")
-                for work in known_for_list:
-                    title = work.get("title") or work.get("name", "Unknown title")
-                    print(f"  - {title}")
+                if known_for_list:
+                    print(f"\n{name} is known for:")
+                    for index, work in enumerate(known_for_list[:5], start=1):
+                        title = work.get("title") or work.get("name", "Unknown title")
+                        year = (work.get("release_date") or "")[:4]
+                        rating = work.get("vote_average", "N/A")
+                        print(f"{index}. {title} ({year}) - Rating: {rating}")
+                else:
+                    print(f"\nNo 'known for' titles found for {name}.")
             print()
 
-    elif user_input.lower() == "3":
+    elif user_input == "3":
+        director_name = input("\nEnter a director's name: ")
+        directed = search_by_director(director_name)
+
+        if not directed:
+            print("No directing credits found.")
+        else:
+            print(f"\nMovies directed by {director_name}:")
+            directed = sorted(
+                directed,
+                key=lambda m: m.get("release_date") or "",
+                reverse=True
+            )
+            for index, movie in enumerate(directed[:10], start=1):
+                title = movie.get("title", "Unknown title")
+                year = (movie.get("release_date") or "")[:4]
+                rating = movie.get("vote_average", "N/A")
+                print(f" {index}. {title} ({year}) - Rating: {rating}")
+        print()
+
+####WIP### Lewis
+
+    elif user_input == "4":
+         genre_name = input("\nEnter a genre name: ")
+         genre = search_by_genre(genre_name)
+
+    elif user_input.lower() == "5":
         break
 
     else:
