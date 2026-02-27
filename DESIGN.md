@@ -12,7 +12,7 @@ We are building a movie recommendation application that helps the user discover 
 
 ## 2. Goals & Objectives
 
-* **Core Goal:** User can search for movies by title, actor, director and see accurate results.
+* **Core Goal:** User can search for movies by title, actor, director and genre to see accurate results.
 * **Secondary Goals:** User can add and remove from a list of favourites, a watchlist, recently viewed.
 
 ## 3. The User Journey
@@ -24,30 +24,30 @@ We are building a movie recommendation application that helps the user discover 
 *Describe the path our code takes from start to finish. Use a numbered list to show the sequence of events.*
 
 1. **Initialization:** We will start by importing any needed modules and set up global variables that are to be used by the terminal only.
-2. **Input Phase:** We will prompt the user to enter their preferred genres to watch and movies they have already watched
-3. **Processing Phase:** We will process the user's answers and compare it to the database of movies. We will write a program that filters movies already watched and choose movies that match their interest
+2. **Input Phase:** We will prompt the user to search a movie to watch and movies that are similar would be displayed.
+3. **Processing Phase:** We will process the user's answers and compare it to the database of movies. For movies the user has already watched will be able to be hidden from the search.
 4. **Output Phase:** We will display a personalised list of recommended movies
 5. **Loop/Cleanup:** We will ask the user if they want more recommendations/ update their preferences/ exit the application
 
 ## 5. Team Responsibility Breakdown
 *How are we dividing the work? Each member should have a primary area of focus.*
 
-* **Ahmadshah:** [e.g., Lead on Data Storage and File I/O.]
-* **Marian:** [e.g., Lead on User Interface and Input Validation.]
-* **Michael:** [e.g., Lead on Core Calculation Logic.]
-* **Lewis:** [e.g., Lead on Testing and Bug Fixing.]
+* **Ahmadshah:** [e.g., Lead on Data Storage.]
+* **Marian:** [e.g., Lead on Documentation.]
+* **Michael:** [e.g., Lead on Frontend development and testing.]
+* **Lewis:** [e.g., Lead on Backend development and testing.]
 
 ## 6. Module & Function Breakdown
 *List the main parts of our code and which team member is responsible for them.*
 
 * **`main.py`**: The entry point that ties all our work together. (Handled by: [Lewis])
 * **`tmdb_client.py`**: The file that deals with the TMDB API using HTTP requests. (Handled by: [Lewis])
-* **`logic_module.py`**: Functions for the "math" or "rules" of the project. (Handled by: [Name])
-* **`storage_module.py`**: Functions for reading/writing files. (Handled by: [Name])
+* **`logic_module.py`**: Functions for the "math" or "rules" of the project. (Handled by: [])
+* **`storage_module.py`**: Functions for reading/writing files. (Handled by: [Ahmadshah])
 
 ## 7. Data Storage & Structures
 *How are we keeping track of information?*
-* **Variables/Collections:** We will store movie collections in lists and we will store more detailed information in dictionaries such as genre, rating, release year. Viewing history will be stored in a list, so the program can avoid giving the same movies. User preferences will be stored in dictionaries so that reommendations can be personalised in detail
+* **Variables/Collections:** Viewing history and a watchlist will be stored so the program can avoid giving the same movies. User preferences will be stored in dictionaries so that reommendations can be personalised in detail.
 * **Persistence:** We store data in an external JSON/ CSV file
 
 ## 8. Development Timeline (Milestones)
