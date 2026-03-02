@@ -1,114 +1,75 @@
-from tmdb_client import search_by_title, search_by_actor, search_related_movies
+import os
+from typing import List, Dict, Any
 
-def movie_list(movie):
-    title = movie.get("title", "Unknown title")
-    release_date = movie.get("release_date", "")
-    year = release_date[:4] if release_date else "----"
-    rating = movie.get("vote_average", "N/A")
-    synopsis = movie.get("overview", "No overview available.")
-    popularity = movie.get("popularity", "N/A")
+import requests
+from dotenv import load_dotenv
 
-    print("\n--- Movie details ---")
-    print(f"Title: {title} ({year}) - Rating: {rating} - Popularity: {popularity}")
-    print(f"Synopsis: {synopsis}\n")
+load_dotenv()
 
-def related_movies(start_movie):
-    current = start_movie
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+TMDB_BASE_URL = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3")
 
-    while True:
-        movie_list(current)
-        movie_id = current.get("id")
-        if movie_id is None:
-            print("No ID for this movie, cannot find similar.\n")
-            break
+if not TMDB_API_KEY:
+    raise RuntimeError("TMDB_API_KEY not set. Put it in .env")
 
-        related_movies = search_related_movies(movie_id)
-        if not related_movies:
-            print("No similar movies found.\n")
-            break
+def search_movies(query: str, *, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    url = f"{TMDB_BASE_URL}/search/movie"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": query,
+        "language": language,
+        "page": page,
+    }
 
-        print("Similar movies:")
-        for index, movie in enumerate(related_movies[:5], start=1):
-            title = movie.get("title", "Unknown title")
-            release_date = movie.get("release_date", "")
-            year = release_date[:4] if release_date else "----"
-            rating = movie.get("vote_average", "N/A")
-            print(f"{index}. {title} ({year}) - Rating: {rating}")
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
 
-        choice = input("\nPick a similar movie by number, or press Enter to go back: ")
+    results = data.get("results", [])
 
-        if choice == "":
-            break
-        if not choice.isdigit():
-            print("That is not a valid number.\n")
-            continue
+    simplified = []
+    for item in results:
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "release_date": item.get("release_date"),
+                "overview": item.get("overview"),
+                "vote_average": item.get("vote_average"),
+            }
+        )
 
-        choice_index = int(choice) - 1
-        if 0 <= choice_index < len(related_movies[:5]):
-            current = related_movies[choice_index]
-        else:
-            print("Please enter a number from the list.\n")
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
 
-while True:
-    print("-------------------")
-    print("1. Search by movie")
-    print("2. Search by actor")
-    print("3. Quit")
-    print("-------------------")
-    user_input = input("Choose a numbered option: ")
+    return simplified
 
-    if user_input == "1":
-        movie_name = input("\nEnter a movie name: ")
-        results = search_by_title(movie_name)
-        print()
+def search_actor(query: str, *, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    url = f"{TMDB_BASE_URL}/search/person"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": query,
+        "language": language,
+        "page": page,
+    }
 
-        if not results:
-            print("No results found.")
-        else:
-            top_movies = results[:5]
-            for index, movie in enumerate(top_movies, start=1):
-                title = movie.get("title", "Unknown title")
-                release_date = movie.get("release_date", "")
-                year = release_date[:4] if release_date else "----"
-                rating = movie.get("vote_average", "N/A")
-                print(f"{index}. {title} ({year}) - Rating: {rating}")
-        while True:
-            choice = input("\nEnter a number to select a movie (or press Enter to go back): ")
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
 
-            if choice == "":
-                break
-            elif choice.isdigit():
-                choice_index = int(choice) - 1
-                if 0 <= choice_index < len(top_movies):
-                    selected = top_movies[choice_index]
-                    related_movies(selected)
-                    break
-                else:
-                    print("Please enter a number from the list.")
-            else:
-                print("That is not a valid number.")
+    results = data.get("results", [])
 
-    elif user_input == "2":
-        actor_name = input("\nEnter an actor's name: ")
-        results = search_by_actor(actor_name)
+    simplified = []
+    for item in results:
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "known_for_department": item.get("known_for_department"),
+                "known_for": item.get("known_for"),
+                "popularity": item.get("popularity"),
+            }
+        )
+    
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
 
-        if not results:
-            print("No results found.")
-        else:
-            for person in results[:3]:
-                name = person.get("name", "Unknown name")
-                known_for_list = person.get("known_for", [])
-
-            if known_for_list:
-                print(f"\n{name} is known for:")
-                for work in known_for_list:
-                    title = work.get("title") or work.get("name", "Unknown title")
-                    print(f"  - {title}")
-            print()
-
-    elif user_input.lower() == "3":
-        break
-
-    else:
-        print("Please choose option '1', '2' or '3'\n")
-        continue
+    return simplified
