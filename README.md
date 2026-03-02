@@ -6,6 +6,7 @@ FlickIndex is a simple movie discovery application that allows you to search for
 - 🔍 Search for movies by title, actor and director.
 - 🗂️ Clean and driven by the TMDB API
 - ⚡ Fast access to movie details
+- 👀 User friendly Textual interface.
 
 ## ❓ Possible Future Features
 
