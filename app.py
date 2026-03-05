@@ -5,13 +5,14 @@ from textual.screen import Screen
 from textual import on, work
 
 from main import search_movies,search_actor
-from storage_module import init_storage, load_data, add_to_favourites, add_to_watchlist
+from storage_module import init_storage, load_data, add_to_favourites, add_to_watchlist, add_to_recently_viewed
 
 class MovieScreen(Screen):
     def __init__(self, movie_data: dict):
         super().__init__()
         # store the dictionary passed from the search results for use in compose()
         self.movie_data = movie_data
+        add_to_recently_viewed(self.movie_data)
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -179,19 +180,29 @@ class HomeScreen(Screen):
 
     def on_mount(self) -> None:
         """
-        on_mount runs automatically when the screen is first loaded.
-        Used to load initial data from files or set the starting focus.
+        runs once automatically when the screen is first loaded
         """
         init_storage()
-        
+        self.refresh_side_panels()
+    
+    def on_screen_resume(self) -> None:
+        """runs every time the user returns to this screen"""
+        self.refresh_side_panels()
+    
+    def refresh_side_panels(self) -> None:
+        """syncs the UI with current data in user_data.json"""
         stored_data = load_data()
         
+        # update recently watched list
         recent_list = self.query_one("#recent_list", ListView)
+        recent_list.clear()
         for movie in stored_data.get("recently_viewed", []):
             title = movie.get("title", "Unknown")
             recent_list.append(ListItem(Label(f"{title}")))
-            
+
+        # update favourites    
         favourites_list = self.query_one("#favourites_list", ListView)
+        favourites_list.clear() 
         for movie in stored_data.get("favourites", []):
             title = movie.get("title", "Unknown")
             favourites_list.append(ListItem(Label(f"{title}")))
