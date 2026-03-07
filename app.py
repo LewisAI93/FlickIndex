@@ -1,11 +1,131 @@
+import os
+from typing import List, Dict, Any
+import requests
+from dotenv import load_dotenv
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Input, Label, Button, ListView, ListItem
 from textual.screen import Screen
 from textual import on, work
+from textual import events
 
-from main import search_movies,search_actor
-from storage_module import init_storage, load_data, add_to_favourites, add_to_watchlist, add_to_recently_viewed
+from storage_module import (
+    init_storage,
+    load_data,
+    add_to_favourites,
+    add_to_watchlist,
+    add_to_recently_viewed,
+)
+
+# ==================
+# TMDB API FUNCTIONS
+# ==================
+
+load_dotenv()
+
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+TMDB_BASE_URL = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3")
+
+if not TMDB_API_KEY:
+    raise RuntimeError("TMDB_API_KEY not set. Put it in .env")
+
+def search_movies(query: str, *, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    url = f"{TMDB_BASE_URL}/search/movie"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": query,
+        "language": language,
+        "page": page,
+    }
+
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    results = data.get("results", [])
+
+    simplified = []
+    for item in results:
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "release_date": item.get("release_date"),
+                "overview": item.get("overview"),
+                "vote_average": item.get("vote_average"),
+                "popularity": item.get("popularity"),
+            }
+        )
+
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
+
+    return simplified
+
+def search_actor(query: str, *, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    url = f"{TMDB_BASE_URL}/search/person"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": query,
+        "language": language,
+        "page": page,
+    }
+
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    results = data.get("results", [])
+
+    simplified = []
+    for item in results:
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "known_for_department": item.get("known_for_department"),
+                "known_for": item.get("known_for"),
+                "popularity": item.get("popularity"),
+            }
+        )
+
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
+
+    return simplified
+
+def similar_movies(movie_id: int, *, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    url = f"{TMDB_BASE_URL}/movie/{movie_id}/similar"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": language,
+        "page": page,
+    }
+
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    results = data.get("results", [])
+
+    simplified = []
+    for item in results:
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "release_date": item.get("release_date"),
+                "overview": item.get("overview"),
+                "vote_average": item.get("vote_average"),
+                "popularity": item.get("popularity"),
+            }
+        )
+
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
+
+    return simplified
+
+# =====================
+# TEXTUAL APP INTERFACE
+# =====================
 
 class MovieScreen(Screen):
     def __init__(self, movie_data: dict):
@@ -13,20 +133,74 @@ class MovieScreen(Screen):
         # store the dictionary passed from the search results for use in compose()
         self.movie_data = movie_data
         add_to_recently_viewed(self.movie_data)
+        self.similar_movies = []
 
     def compose(self) -> ComposeResult:
         yield Header()
-        with Vertical(id="movie_details"):
-            yield Label(f"Title: {self.movie_data.get('title')}")
-            yield Label(f"Release Date: {self.movie_data.get('release_date')}")
-            yield Label(f"Rating: {self.movie_data.get('vote_average')}")
-            yield Label(" ")
-            yield Label(self.movie_data.get("overview", "No overview available."))
-            yield Label(" ")
-            yield Button("Add to Favourites", id="fav_button", variant="success")
-            yield Button("Add to Watchlist", id="watch_list_button", variant="primary")
-            yield Button("Back to Search", id="back_button", variant="default")
+        with Horizontal():
+            with Vertical(id="movie_details"):
+                yield Label(f"Title: {self.movie_data.get('title')}")
+                yield Label(f"Release Date: {self.movie_data.get('release_date')}")
+                yield Label(f"Rating: {self.movie_data.get('vote_average')}")
+                yield Label(" ")
+                yield Label(self.movie_data.get("overview", "No overview available."))
+                yield Label(" ")
+                yield Button("Add to Favourites", id="fav_button", variant="success")
+                yield Button("Add to Watchlist", id="watch_list_button", variant="primary")
+                yield Button("Back to Search", id="back_button", variant="default")
+            with Vertical(id="similar_pane"):
+                yield Label("Similar Movies")
+                yield ListView(id="similar_list")
         yield Footer()
+
+    def on_mount(self) -> None:
+        self.fetch_similar_movies_background()
+
+    @work(thread=True)
+    def fetch_similar_movies_background(self) -> None:
+        try:
+            movie_id = self.movie_data.get("id")
+            if not movie_id:
+                return
+            similar = similar_movies(movie_id)
+            self.similar_movies = similar
+            self.app.call_from_thread(self.display_similar_movies, similar)
+        except Exception as e:
+            self.app.call_from_thread(self.display_similar_error, str(e))
+
+    def display_similar_movies(self, movies: list) -> None:
+        list_view = self.query_one("#similar_list", ListView)
+        list_view.clear()
+
+        if not movies:
+            list_view.append(ListItem(Label("No similar movies found.")))
+            return
+
+        for movie in movies[:8]:
+            title = movie.get("title", "Unknown")
+            year = (movie.get("release_date") or "")[:4]
+            label_text = f"{title} ({year})" if year else title
+            list_view.append(
+                ListItem(Label(label_text), id=f"similar_{movie.get('id')}")
+            )
+
+    def display_similar_error(self, error_msg: str) -> None:
+        list_view = self.query_one("#similar_list", ListView)
+        list_view.clear()
+        list_view.append(ListItem(Label(f"Error loading similar movies: {error_msg}")))
+
+    @on(ListView.Selected, "#similar_list")
+    def open_similar_movie(self, event: ListView.Selected) -> None:
+        if not event.item.id:
+            return
+        try:
+            movie_id = int(event.item.id.split("_", 1)[1])
+        except (IndexError, ValueError):
+            return
+
+        movie = next((m for m in self.similar_movies if m.get("id") == movie_id), None)
+        if movie:
+            self.app.push_screen(MovieScreen(movie))
 
     @on(Button.Pressed, "#back_button")
     def close_screen(self) -> None:
@@ -41,31 +215,60 @@ class MovieScreen(Screen):
     def save_watchlist(self) -> None:
         add_to_watchlist(self.movie_data)
         self.notify("Added to Watchlist!")
-        
+
 class ActorScreen(Screen):
     def __init__(self, actor_data: dict):
         super().__init__()
         self.actor_data = actor_data
+        self.known_for_map = {}
 
     def compose(self) -> ComposeResult:
-        known_for_data = self.actor_data.get("known_for") or []
-        titles = [item.get("title") or item.get("name") for item in known_for_data]
-        known_for_str = ", ".join([t for t in titles if t]) if titles else "No known works."
-
         yield Header()
         with Vertical(id="actor_details"):
             yield Label(f"Name: {self.actor_data.get('name')}")
             yield Label(f"Department: {self.actor_data.get('known_for_department')}")
             yield Label(f"Popularity: {self.actor_data.get('popularity')}")
             yield Label(" ")
-            yield Label(f"Known For: {known_for_str}")
+            yield Label("Known For:")
+            yield ListView(id="known_for_list")
             yield Label(" ")
             yield Button("Back to Search", id="back_button", variant="default")
         yield Footer()
 
+    def on_mount(self) -> None:
+        known_for_data = self.actor_data.get("known_for") or []
+        list_view = self.query_one("#known_for_list", ListView)
+        list_view.clear()
+        self.known_for_map.clear()
+
+        for item in known_for_data:
+            title = item.get("title") or item.get("name") or "Unknown"
+            year = (item.get("release_date") or item.get("first_air_date") or "")[:4]
+            label_text = f"{title} ({year})" if year else title
+            list_id = f"known_{item.get('id')}"
+            self.known_for_map[list_id] = item
+            list_view.append(ListItem(Label(label_text), id=list_id))
+
+        if list_view.children:
+            list_view.index = 0
+            list_view.focus()
+
     @on(Button.Pressed, "#back_button")
     def close_screen(self) -> None:
         self.app.pop_screen()
+
+    @on(ListView.Selected, "#known_for_list")
+    def open_known_for(self, event: ListView.Selected) -> None:
+        if not event.item.id:
+            return
+        movie = self.known_for_map.get(event.item.id)
+        if not movie:
+            return
+        self.app.push_screen(MovieScreen(movie))
+
+    def on_key(self, event: events.Key) -> None:
+        if event.key == "space" and isinstance(self.focused, Button):
+            self.focused.press()
 
 class HomeScreen(Screen):
 
