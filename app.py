@@ -2,31 +2,94 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Input, Label, Button, ListView, ListItem
 from textual.screen import Screen
-from textual import on, work
+from textual import on, work, events
 
-from main import search_movies,search_actor
-from storage_module import init_storage, load_data, add_to_favourites, add_to_watchlist, add_to_recently_viewed
+from main import search_movies, search_actor, similar_movies
+from storage_module import (
+    init_storage,
+    load_data,
+    add_to_favourites,
+    add_to_watchlist,
+    add_to_recently_viewed,
+)
+
+# =====================
+# TEXTUAL APP INTERFACE
+# =====================
 
 class MovieScreen(Screen):
     def __init__(self, movie_data: dict):
         super().__init__()
-        # store the dictionary passed from the search results for use in compose()
         self.movie_data = movie_data
         add_to_recently_viewed(self.movie_data)
+        self.similar_movies = []
 
     def compose(self) -> ComposeResult:
         yield Header()
-        with Vertical(id="movie_details"):
-            yield Label(f"Title: {self.movie_data.get('title')}")
-            yield Label(f"Release Date: {self.movie_data.get('release_date')}")
-            yield Label(f"Rating: {self.movie_data.get('vote_average')}")
-            yield Label(" ")
-            yield Label(self.movie_data.get("overview", "No overview available."))
-            yield Label(" ")
-            yield Button("Add to Favourites", id="fav_button", variant="success")
-            yield Button("Add to Watchlist", id="watch_list_button", variant="primary")
-            yield Button("Back to Search", id="back_button", variant="default")
+        with Horizontal():
+            with Vertical(id="movie_details"):
+                yield Label(f"Title: {self.movie_data.get('title')}")
+                yield Label(f"Release Date: {self.movie_data.get('release_date')}")
+                yield Label(f"Rating: {self.movie_data.get('vote_average')}")
+                yield Label(" ")
+                yield Label(self.movie_data.get("overview", "No overview available."))
+                yield Label(" ")
+                yield Button("Add to Favourites", id="fav_button", variant="success")
+                yield Button("Add to Watchlist", id="watch_list_button", variant="primary")
+                yield Button("Back to Search", id="back_button", variant="default")
+            with Vertical(id="similar_pane"):
+                yield Label("Similar Movies")
+                yield ListView(id="similar_list")
         yield Footer()
+
+    def on_mount(self) -> None:
+        self.fetch_similar_movies_background()
+
+    @work(thread=True)
+    def fetch_similar_movies_background(self) -> None:
+        try:
+            movie_id = self.movie_data.get("id")
+            if not movie_id:
+                return
+            similar = similar_movies(movie_id)
+            self.similar_movies = similar
+            self.app.call_from_thread(self.display_similar_movies, similar)
+        except Exception as e:
+            self.app.call_from_thread(self.display_similar_error, str(e))
+
+    def display_similar_movies(self, movies: list) -> None:
+        list_view = self.query_one("#similar_list", ListView)
+        list_view.clear()
+
+        if not movies:
+            list_view.append(ListItem(Label("No similar movies found.")))
+            return
+
+        for movie in movies[:8]:
+            title = movie.get("title", "Unknown")
+            year = (movie.get("release_date") or "")[:4]
+            label_text = f"{title} ({year})" if year else title
+            list_view.append(
+                ListItem(Label(label_text), id=f"similar_{movie.get('id')}")
+            )
+
+    def display_similar_error(self, error_msg: str) -> None:
+        list_view = self.query_one("#similar_list", ListView)
+        list_view.clear()
+        list_view.append(ListItem(Label(f"Error loading similar movies: {error_msg}")))
+
+    @on(ListView.Selected, "#similar_list")
+    def open_similar_movie(self, event: ListView.Selected) -> None:
+        if not event.item.id:
+            return
+        try:
+            movie_id = int(event.item.id.split("_", 1)[1])
+        except (IndexError, ValueError):
+            return
+
+        movie = next((m for m in self.similar_movies if m.get("id") == movie_id), None)
+        if movie:
+            self.app.push_screen(MovieScreen(movie))
 
     @on(Button.Pressed, "#back_button")
     def close_screen(self) -> None:
@@ -41,31 +104,60 @@ class MovieScreen(Screen):
     def save_watchlist(self) -> None:
         add_to_watchlist(self.movie_data)
         self.notify("Added to Watchlist!")
-        
+
 class ActorScreen(Screen):
     def __init__(self, actor_data: dict):
         super().__init__()
         self.actor_data = actor_data
+        self.known_for_map = {}
 
     def compose(self) -> ComposeResult:
-        known_for_data = self.actor_data.get("known_for") or []
-        titles = [item.get("title") or item.get("name") for item in known_for_data]
-        known_for_str = ", ".join([t for t in titles if t]) if titles else "No known works."
-
         yield Header()
         with Vertical(id="actor_details"):
             yield Label(f"Name: {self.actor_data.get('name')}")
             yield Label(f"Department: {self.actor_data.get('known_for_department')}")
             yield Label(f"Popularity: {self.actor_data.get('popularity')}")
             yield Label(" ")
-            yield Label(f"Known For: {known_for_str}")
+            yield Label("Known For:")
+            yield ListView(id="known_for_list")
             yield Label(" ")
             yield Button("Back to Search", id="back_button", variant="default")
         yield Footer()
 
+    def on_mount(self) -> None:
+        known_for_data = self.actor_data.get("known_for") or []
+        list_view = self.query_one("#known_for_list", ListView)
+        list_view.clear()
+        self.known_for_map.clear()
+
+        for item in known_for_data:
+            title = item.get("title") or item.get("name") or "Unknown"
+            year = (item.get("release_date") or item.get("first_air_date") or "")[:4]
+            label_text = f"{title} ({year})" if year else title
+            list_id = f"known_{item.get('id')}"
+            self.known_for_map[list_id] = item
+            list_view.append(ListItem(Label(label_text), id=list_id))
+
+        if list_view.children:
+            list_view.index = 0
+            list_view.focus()
+
     @on(Button.Pressed, "#back_button")
     def close_screen(self) -> None:
         self.app.pop_screen()
+
+    @on(ListView.Selected, "#known_for_list")
+    def open_known_for(self, event: ListView.Selected) -> None:
+        if not event.item.id:
+            return
+        movie = self.known_for_map.get(event.item.id)
+        if not movie:
+            return
+        self.app.push_screen(MovieScreen(movie))
+
+    def on_key(self, event: events.Key) -> None:
+        if event.key == "space" and isinstance(self.focused, Button):
+            self.focused.press()
 
 class HomeScreen(Screen):
 
@@ -105,24 +197,15 @@ class HomeScreen(Screen):
         results_list.append(ListItem(Label(f"Searching TMDB for '{search_term}'...")))
         self.fetch_search_results_background(search_term)
 
-    # temp workaround before backend fix
     @work(thread=True)
     def fetch_search_results_background(self, query: str) -> None:
-        """
-        Runs the API calls on a background thread. 
-        Without this, the app would freeze and stop responding while waiting 
-         for TMDB to answer.
-        """
         try:
-            # Code here runs 'behind the scenes'
             movies = search_movies(query)
             actors = search_actor(query)
             
             combined_results = movies + actors
             combined_results.sort(key=lambda x: x.get("popularity") or 0, reverse=True)
 
-            # We must use call_from_thread to send the data back to the 'Main Thread'
-            # to safely update the UI widgets.
             self.app.call_from_thread(self.display_results, combined_results)
         except Exception as e:
             self.app.call_from_thread(self.display_error, str(e))
@@ -155,7 +238,6 @@ class HomeScreen(Screen):
             self.current_results[list_id] = item
             results_list.append(ListItem(Label(label_text), id=list_id))
         
-        # tabs to results
         results_list.focus()
 
     @on(ListView.Selected, "#results_list")
@@ -179,28 +261,21 @@ class HomeScreen(Screen):
         results_list.append(ListItem(Label(f"API Error: {error_msg}")))
 
     def on_mount(self) -> None:
-        """
-        runs once automatically when the screen is first loaded
-        """
         init_storage()
         self.refresh_side_panels()
     
     def on_screen_resume(self) -> None:
-        """runs every time the user returns to this screen"""
         self.refresh_side_panels()
     
     def refresh_side_panels(self) -> None:
-        """syncs the UI with current data in user_data.json"""
         stored_data = load_data()
         
-        # update recently watched list
         recent_list = self.query_one("#recent_list", ListView)
         recent_list.clear()
         for movie in stored_data.get("recently_viewed", []):
             title = movie.get("title", "Unknown")
             recent_list.append(ListItem(Label(f"{title}")))
 
-        # update favourites    
         favourites_list = self.query_one("#favourites_list", ListView)
         favourites_list.clear() 
         for movie in stored_data.get("favourites", []):
@@ -225,6 +300,7 @@ class FlickIndex(App):
 
     def on_mount(self) -> None:
         self.push_screen(HomeScreen())
+
 if __name__ == "__main__":
     app = FlickIndex()
     app.run()
