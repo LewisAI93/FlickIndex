@@ -13,9 +13,176 @@ from storage_module import (
     add_to_recently_viewed,
 )
 
+# ===============
+# ASCII art 4 fun
+# ===============
+
+ASCII_WATCHLIST = r"""
+.::        .::            .::                  .::            .::  
+.::        .::            .::         .::      .:: .:         .::  
+.::   .:   .::   .::    .:.: .:   .:::.::      .::    .:::: .:.: .:
+.::  .::   .:: .::  .::   .::   .::   .: .:    .::.::.::      .::  
+.:: .: .:: .::.::   .::   .::  .::    .::  .:: .::.::  .:::   .::  
+.: .:    .::::.::   .::   .::   .::   .:   .:: .::.::    .::  .::  
+.::        .::  .:: .:::   .::    .:::.::  .::.:::.::.:: .::   .:: 
+"""
+
+ASCII_FAVOURITES = r"""
+.::::::::                                                   .::                   
+.::                                                     .:  .::                   
+.::         .::    .::     .::   .::    .::  .::.: .:::   .:.: .:   .::     .:::: 
+.::::::   .::  .::  .::   .::  .::  .:: .::  .:: .::   .::  .::   .:   .:: .::    
+.::      .::   .::   .:: .::  .::    .::.::  .:: .::   .::  .::  .::::: .::  .::: 
+.::      .::   .::    .:.::    .::  .:: .::  .:: .::   .::  .::  .:            .::
+.::        .:: .:::    .::       .::      .::.::.:::   .::   .::   .::::   .:: .::
+"""
+
 # =====================
 # TEXTUAL APP INTERFACE
 # =====================
+
+class HomeScreen(Screen):
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        
+        with Horizontal():
+            with Vertical(id="left_pane"):
+                yield Label("Search Database")
+                yield Input(placeholder="Movie or Actor name...", id="search_input")
+                yield Button("Search", id="search_button", variant="primary")
+                yield ListView(id="results_list")
+                yield Label(" ")
+                yield Button("Quit Application", id="quit_button", variant="error")
+            
+            with Vertical(id="right_pane"):
+                yield Label("Recently Watched")
+                yield ListView(id="recent_list")
+                yield Button("View Watchlist", id="watchlist_button", variant="primary")
+                yield Label("")
+                yield Label("Your Favourites")
+                yield ListView(id="favourites_list")
+                yield Button("View Favourites", id="favourites_button", variant="primary")
+
+        yield Footer()
+
+    @on(Input.Submitted, "#search_input")
+    @on(Button.Pressed, "#search_button")
+    def execute_search(self) -> None:
+        search_term = self.query_one("#search_input", Input).value
+        results_list = self.query_one("#results_list", ListView)
+        
+        results_list.clear()
+
+        if not search_term.strip():
+            results_list.append(ListItem(Label("Error: Enter a search term.")))
+            return
+        
+        results_list.append(ListItem(Label(f"Searching TMDB for '{search_term}'...")))
+        self.fetch_search_results_background(search_term)
+
+    @work(thread=True)
+    def fetch_search_results_background(self, query: str) -> None:
+        try:
+            movies = search_movies(query)
+            actors = search_actor(query)
+            
+            combined_results = movies + actors
+            combined_results.sort(key=lambda x: x.get("popularity") or 0, reverse=True)
+
+            self.app.call_from_thread(self.display_results, combined_results)
+        except Exception as e:
+            self.app.call_from_thread(self.display_error, str(e))
+
+    current_results = {}
+
+    def display_results(self, results: list) -> None:
+        results_list = self.query_one("#results_list", ListView)
+        results_list.clear()
+        self.current_results.clear()
+        
+        if not results:
+            results_list.append(ListItem(Label("No results found.")))
+            return
+            
+        for item in results[:8]:
+            item_id = str(item.get("id"))
+            
+            if "title" in item:
+                title = item.get("title", "Unknown")
+                year = (item.get("release_date") or "")[:4]
+                label_text = f"{title} ({year})"
+                list_id = f"movie_{item_id}"
+            else:
+                name = item.get("name", "Unknown")
+                dept = item.get("known_for_department", "Unknown")
+                label_text = f"{name} ({dept})"
+                list_id = f"actor_{item_id}"
+            
+            self.current_results[list_id] = item
+            results_list.append(ListItem(Label(label_text), id=list_id))
+        
+        results_list.focus()
+
+    @on(ListView.Selected, "#results_list")
+    def open_details(self, event: ListView.Selected) -> None:
+        if not event.item.id:
+            return
+            
+        selected_item = self.current_results.get(event.item.id)
+        
+        if not selected_item:
+            return
+            
+        if event.item.id.startswith("movie_"):
+            self.app.push_screen(MovieScreen(selected_item))
+        elif event.item.id.startswith("actor_"):
+            self.app.push_screen(ActorScreen(selected_item))
+
+    def display_error(self, error_msg: str) -> None:
+        results_list = self.query_one("#results_list", ListView)
+        results_list.clear()
+        results_list.append(ListItem(Label(f"API Error: {error_msg}")))
+
+    def on_mount(self) -> None:
+        init_storage()
+        self.refresh_side_panels()
+    
+    def on_screen_resume(self) -> None:
+        self.refresh_side_panels()
+    
+    def refresh_side_panels(self) -> None:
+        stored_data = load_data()
+        
+        recent_list = self.query_one("#recent_list", ListView)
+        recent_list.clear()
+        for movie in stored_data.get("recently_viewed", []):
+            title = movie.get("title", "Unknown")
+            recent_list.append(ListItem(Label(f"{title}")))
+
+        favourites_list = self.query_one("#favourites_list", ListView)
+        favourites_list.clear() 
+        for movie in stored_data.get("favourites", []):
+            title = movie.get("title", "Unknown")
+            favourites_list.append(ListItem(Label(f"{title}")))
+            
+    @on(Button.Pressed, "#watchlist_button")
+    def view_watchlist(self) -> None:
+        data = load_data()
+        watchlist = data.get("watchlist", [])
+        self.app.push_screen(CollectionScreen(ASCII_WATCHLIST, watchlist))
+
+    @on(Button.Pressed, "#favourites_button")
+    def view_favourites(self) -> None:
+        data = load_data()
+        favourites = data.get("favourites", [])
+        self.app.push_screen(CollectionScreen(ASCII_FAVOURITES, favourites))
+
+    @on(Button.Pressed, "#quit_button")
+    def action_quit_app(self) -> None:
+        """Exit application action"""
+        self.app.exit()
+
 
 class MovieScreen(Screen):
     def __init__(self, movie_data: dict):
@@ -36,7 +203,7 @@ class MovieScreen(Screen):
                 yield Label(" ")
                 yield Button("Add to Favourites", id="fav_button", variant="success")
                 yield Button("Add to Watchlist", id="watch_list_button", variant="primary")
-                yield Button("Back to Search", id="back_button", variant="default")
+                yield Button("Back", id="back_button", variant="default")
             with Vertical(id="similar_pane"):
                 yield Label("Similar Movies")
                 yield ListView(id="similar_list")
@@ -155,143 +322,86 @@ class ActorScreen(Screen):
             return
         self.app.push_screen(MovieScreen(movie))
 
-
-class HomeScreen(Screen):
+class CollectionScreen(Screen):
+    """
+    A reusable screen to display specific collections - Favourites, Watchlist
+    """
+    def __init__(self, title: str, movie_list: list):
+        super().__init__()
+        self.display_title = title
+        self.movies = movie_list
+        self.movie_map = {} # Cache to map UI IDs to data
 
     def compose(self) -> ComposeResult:
         yield Header()
-        
-        with Horizontal():
-            with Vertical(id="left_pane"):
-                yield Label("Search Database")
-                yield Input(placeholder="Movie or Actor name...", id="search_input")
-                yield Button("Search", id="search_button", variant="primary")
-                yield ListView(id="results_list")
-            
-            with Vertical(id="right_pane"):
-                yield Label("Recently Watched")
-                yield ListView(id="recent_list")
-                yield Button("View Watchlist", id="watchlist_button", variant="primary")
-                yield Label("")
-                yield Label("Your Favourites")
-                yield ListView(id="favourites_list")
-                yield Button("View Favourites", id="favourites_button", variant="primary")
-
+        with Vertical(id="collection_container"):
+            yield Label(self.display_title, id="ascii_header")
+            yield ListView(id="collection_list")
+            yield Button("Back to Home", id="back_to_home", variant="default")
         yield Footer()
-
-    @on(Input.Submitted, "#search_input")
-    @on(Button.Pressed, "#search_button")
-    def execute_search(self) -> None:
-        search_term = self.query_one("#search_input", Input).value
-        results_list = self.query_one("#results_list", ListView)
-        
-        results_list.clear()
-
-        if not search_term.strip():
-            results_list.append(ListItem(Label("Error: Enter a search term.")))
-            return
-        
-        results_list.append(ListItem(Label(f"Searching TMDB for '{search_term}'...")))
-        self.fetch_search_results_background(search_term)
-
-    @work(thread=True)
-    def fetch_search_results_background(self, query: str) -> None:
-        try:
-            movies = search_movies(query)
-            actors = search_actor(query)
-            
-            combined_results = movies + actors
-            combined_results.sort(key=lambda x: x.get("popularity") or 0, reverse=True)
-
-            self.app.call_from_thread(self.display_results, combined_results)
-        except Exception as e:
-            self.app.call_from_thread(self.display_error, str(e))
-
-    current_results = {}
-
-    def display_results(self, results: list) -> None:
-        results_list = self.query_one("#results_list", ListView)
-        results_list.clear()
-        self.current_results.clear()
-        
-        if not results:
-            results_list.append(ListItem(Label("No results found.")))
-            return
-            
-        for item in results[:8]:
-            item_id = str(item.get("id"))
-            
-            if "title" in item:
-                title = item.get("title", "Unknown")
-                year = (item.get("release_date") or "")[:4]
-                label_text = f"{title} ({year})"
-                list_id = f"movie_{item_id}"
-            else:
-                name = item.get("name", "Unknown")
-                dept = item.get("known_for_department", "Unknown")
-                label_text = f"{name} ({dept})"
-                list_id = f"actor_{item_id}"
-            
-            self.current_results[list_id] = item
-            results_list.append(ListItem(Label(label_text), id=list_id))
-        
-        results_list.focus()
-
-    @on(ListView.Selected, "#results_list")
-    def open_details(self, event: ListView.Selected) -> None:
-        if not event.item.id:
-            return
-            
-        selected_item = self.current_results.get(event.item.id)
-        
-        if not selected_item:
-            return
-            
-        if event.item.id.startswith("movie_"):
-            self.app.push_screen(MovieScreen(selected_item))
-        elif event.item.id.startswith("actor_"):
-            self.app.push_screen(ActorScreen(selected_item))
-
-    def display_error(self, error_msg: str) -> None:
-        results_list = self.query_one("#results_list", ListView)
-        results_list.clear()
-        results_list.append(ListItem(Label(f"API Error: {error_msg}")))
-
+    
     def on_mount(self) -> None:
-        init_storage()
-        self.refresh_side_panels()
-    
-    def on_screen_resume(self) -> None:
-        self.refresh_side_panels()
-    
-    def refresh_side_panels(self) -> None:
-        stored_data = load_data()
+        list_view = self.query_one("#collection_list", ListView)
+        list_view.clear()
+
+        if not self.movies:
+            list_view.append(ListItem(Label("List is currently empty.")))
+            return
         
-        recent_list = self.query_one("#recent_list", ListView)
-        recent_list.clear()
-        for movie in stored_data.get("recently_viewed", []):
+        for movie in self.movies:
             title = movie.get("title", "Unknown")
-            recent_list.append(ListItem(Label(f"{title}")))
+            year = (movie.get("release_date") or "")[:4]
+            label_text = f"{title} ({year})" if year else title
+            list_id = f"coll_{movie.get('id')}"
 
-        favourites_list = self.query_one("#favourites_list", ListView)
-        favourites_list.clear() 
-        for movie in stored_data.get("favourites", []):
-            title = movie.get("title", "Unknown")
-            favourites_list.append(ListItem(Label(f"{title}")))
+            self.movie_map[list_id] = movie
+            list_view.append(ListItem(Label(label_text), id=list_id))
 
+        list_view.focus()
+
+    @on(ListView.Selected, "#collection_list")
+    def open_movie_detail(self, event: ListView.Selected) -> None:
+        movie = self.movie_map.get(event.item.id)
+        if movie:
+            self.app.push_screen(MovieScreen(movie))
+
+    @on(Button.Pressed, "#back_to_home")
+    def close_screen(self) -> None:
+        self.app.pop_screen()
+    
 
 class FlickIndex(App):
     CSS = """
     #left_pane {
         width: 1fr;
-        padding: 1;
+        padding: 2;
     }
     #right_pane {
         width: 1fr;
-        padding: 1;
+        padding: 2;
         border-left: solid green;
     }
+    
+    #collection_header {
+        width: 100%;
+        content-align: center middle;
+        text-style: bold;
+        background: $primary;
+        color: $text;
+        margin-bottom: 2;
+        padding: 1;
+        border: tall $secondary;
+    }
+
+    #ascii_header {
+        text-align: center;
+        width: 100%;
+        height: auto;
+        color: $primary;
+        margin-bottom: 1;
+    }
     """
+
     
     BINDINGS = [("q", "quit", "Quit application")]
 
