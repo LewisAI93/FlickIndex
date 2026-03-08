@@ -155,9 +155,6 @@ class ActorScreen(Screen):
             return
         self.app.push_screen(MovieScreen(movie))
 
-    def on_key(self, event: events.Key) -> None:
-        if event.key == "space" and isinstance(self.focused, Button):
-            self.focused.press()
 
 class HomeScreen(Screen):
 
