@@ -1,146 +1,149 @@
-from tmdb_client import search_by_title, search_by_actor, search_by_director, search_related_movies, search_by_genre
+import os
+from typing import List, Dict, Any
+import requests
+from dotenv import load_dotenv
 
-def movie_list(movie):
-    title = movie.get("title", "Unknown title")
-    release_date = movie.get("release_date", "")
-    year = release_date[:4] if release_date else "----"
-    rating = movie.get("vote_average", "N/A")
-    synopsis = movie.get("overview", "No overview available.")
-    popularity = movie.get("popularity", "N/A")
+# ==================
+# TMDB API FUNCTIONS
+# ==================
 
-    print("\n--- Movie details ---")
-    print(f"Title: {title} ({year}) - Rating: {rating} - Popularity: {popularity}")
-    print(f"Synopsis: {synopsis}\n")
+load_dotenv()
 
-def related_movies(start_movie):
-    current = start_movie
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+TMDB_BASE_URL = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3")
 
-    while True:
-        movie_list(current)
-        movie_id = current.get("id")
-        if movie_id is None:
-            print("No ID for this movie, cannot find similar.\n")
-            break
+if not TMDB_API_KEY:
+    raise RuntimeError("TMDB_API_KEY not set. Put it in .env")
 
-        related_movies = search_related_movies(movie_id)
-        if not related_movies:
-            print("No similar movies found.\n")
-            break
+def search_movies(query: str, *, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    """
+    Search for movies using the TMDB API and return data about the movie
 
-        print("Similar movies:")
-        for index, movie in enumerate(related_movies[:5], start=1):
-            title = movie.get("title", "Unknown title")
-            release_date = movie.get("release_date", "")
-            year = release_date[:4] if release_date else "----"
-            rating = movie.get("vote_average", "N/A")
-            print(f"{index}. {title} ({year}) - Rating: {rating}")
+    Args:
+    - query (str): the search query string (ex. movie)
+    - language (str): set to English by default
+    - page (int): page number for results. Starts on page 1
 
-        choice = input("\nPick a similar movie by number, or press Enter to go back: ")
+    Returns:
+        List[Dic[str, Any]]: returns a dictionary containing:
+        - id (int): numerical id of the movie on the TMDB API
+        - title (str): title of the movie
+        - overview (str): brief overview of the movie
+        - vote average (float): average rating of the movie
+        - popularity (float): popularity score
+    """
+    url = f"{TMDB_BASE_URL}/search/movie"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": query,
+        "language": language,
+        "page": page,
+    }
 
-        if choice == "":
-            break
-        if not choice.isdigit():
-            print("That is not a valid number.\n")
-            continue
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    results = data.get("results", [])
 
-        choice_index = int(choice) - 1
-        if 0 <= choice_index < len(related_movies[:5]):
-            current = related_movies[choice_index]
-        else:
-            print("Please enter a number from the list.\n")
+    simplified = []
+    for item in results:
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "release_date": item.get("release_date"),
+                "overview": item.get("overview"),
+                "vote_average": item.get("vote_average"),
+                "popularity": item.get("popularity"),
+            }
+        )
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
+    return simplified
 
-while True:
-    print("-------------------")
-    print("1. Search by movie")
-    print("2. Search by actor")
-    print("3. Search by director")
-    print("4. Search by genre")
-    print("5. Quit")
-    print("-------------------")
-    user_input = input("Choose a numbered option: ")
+def search_actor(query: str, *, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    """
+    Search for actors using the TMDB API and return data about the actor
 
-    if user_input == "1":
-        movie_name = input("\nEnter a movie name: ")
-        results = search_by_title(movie_name)
-        print()
+    Args:
+    - query (str): query of actor's name
+    - language (str): set to English by default
+    - page (int): page number for results. Starts on page 1
 
-        if not results:
-            print("No results found.")
-        else:
-            top_movies = results[:5]
-            for index, movie in enumerate(top_movies, start=1):
-                title = movie.get("title", "Unknown title")
-                release_date = movie.get("release_date", "")
-                year = release_date[:4] if release_date else "----"
-                rating = movie.get("vote_average", "N/A")
-                print(f"{index}. {title} ({year}) - Rating: {rating}")
-        while True:
-            choice = input("\nEnter a number to select a movie (or press Enter to go back): ")
+    Returns:
+        List[Dict[str, any]]: a dictionary containing:
+        - id (int): numerical ID of the actor on TMDB API
+        - name (str): name of the actor
+        - known for department (str): genres that the actor is known for
+        - known for (str): movies that the actor is known for
+        - popularity (float): popularity score
+    """
+    url = f"{TMDB_BASE_URL}/search/person"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": query,
+        "language": language,
+        "page": page,
+    }
 
-            if choice == "":
-                break
-            elif choice.isdigit():
-                choice_index = int(choice) - 1
-                if 0 <= choice_index < len(top_movies):
-                    selected = top_movies[choice_index]
-                    related_movies(selected)
-                    break
-                else:
-                    print("Please enter a number from the list.")
-            else:
-                print("That is not a valid number.")
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    results = data.get("results", [])
 
-    elif user_input == "2":
-        actor_name = input("\nEnter an actor's name: ")
-        results = search_by_actor(actor_name)
+    simplified = []
+    for item in results:
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "known_for_department": item.get("known_for_department"),
+                "known_for": item.get("known_for"),
+                "popularity": item.get("popularity"),
+            }
+        )
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
+    return simplified
 
-        if not results:
-            print("No results found.")
-        else:
-            for person in results[:3]:
-                name = person.get("name", "Unknown name")
-                known_for_list = person.get("known_for", [])
+def similar_movies(movie_id: int, *, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    """
+    Search for similar movies on the TMDB API and return data about the movies
 
-                if known_for_list:
-                    print(f"\n{name} is known for:")
-                    for index, work in enumerate(known_for_list[:5], start=1):
-                        title = work.get("title") or work.get("name", "Unknown title")
-                        year = (work.get("release_date") or "")[:4]
-                        rating = work.get("vote_average", "N/A")
-                        print(f"{index}. {title} ({year}) - Rating: {rating}")
-                else:
-                    print(f"\nNo 'known for' titles found for {name}.")
-            print()
+    Args: 
+    - movie id (int): numerical id of the movie on the TMDB API
+    - language (str): set to English by default
+    - page (int): page number for results. Starts at 1
 
-    elif user_input == "3":
-        director_name = input("\nEnter a director's name: ")
-        directed = search_by_director(director_name)
+    Returns:
+        List[Dict[str, Any]]: a dictionary containing:
+        - id (int): numerical id of the movie on the TMDB API
+        - title (str): title of the movie
+        - release date (int): when the movie was released
+        - vote average (float): average rating of the movie
+        - popularity (float): popularity score
+    """
+    url = f"{TMDB_BASE_URL}/movie/{movie_id}/similar"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": language,
+        "page": page,
+    }
 
-        if not directed:
-            print("No directing credits found.")
-        else:
-            print(f"\nMovies directed by {director_name}:")
-            directed = sorted(
-                directed,
-                key=lambda m: m.get("release_date") or "",
-                reverse=True
-            )
-            for index, movie in enumerate(directed[:10], start=1):
-                title = movie.get("title", "Unknown title")
-                year = (movie.get("release_date") or "")[:4]
-                rating = movie.get("vote_average", "N/A")
-                print(f" {index}. {title} ({year}) - Rating: {rating}")
-        print()
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    results = data.get("results", [])
 
-####WIP### Lewis
-
-    elif user_input == "4":
-         genre_name = input("\nEnter a genre name: ")
-         genre = search_by_genre(genre_name)
-
-    elif user_input.lower() == "5":
-        break
-
-    else:
-        print("Please choose option '1', '2' or '3'\n")
-        continue
+    simplified = []
+    for item in results:
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "release_date": item.get("release_date"),
+                "overview": item.get("overview"),
+                "vote_average": item.get("vote_average"),
+                "popularity": item.get("popularity"),
+            }
+        )
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
+    return simplified
