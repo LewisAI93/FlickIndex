@@ -48,21 +48,26 @@ class HomeScreen(Screen):
         
         with Horizontal():
             with Vertical(id="left_pane"):
-                yield Label("Search Database")
+                yield Label("Search Database", classes="section_heading")
                 yield Input(placeholder="Movie or Actor name...", id="search_input")
                 yield Button("Search", id="search_button", variant="primary")
                 yield ListView(id="results_list")
+
+                yield Label("Recently Viewed", classes="section_heading")
+                yield ListView(id="recent_list")
+
                 yield Label(" ")
                 yield Button("Quit Application", id="quit_button", variant="error")
             
             with Vertical(id="right_pane"):
-                yield Label("Recently Watched")
-                yield ListView(id="recent_list")
-                yield Button("View Watchlist", id="watchlist_button", variant="primary")
-                yield Label("")
-                yield Label("Your Favourites")
+                yield Label("Your Favourites", classes="section_heading")
                 yield ListView(id="favourites_list")
                 yield Button("View Favourites", id="favourites_button", variant="primary")
+                
+                yield Label("Your Watchlist", classes="section_heading")
+                yield ListView(id="watchlist_preview_list")
+                yield Button("View Watchlist", id="watchlist_button", variant="primary")
+
 
         yield Footer()
 
@@ -165,6 +170,12 @@ class HomeScreen(Screen):
         for movie in stored_data.get("favourites", []):
             title = movie.get("title", "Unknown")
             favourites_list.append(ListItem(Label(f"{title}")))
+
+        watchlist_list = self.query_one("#watchlist_preview_list", ListView)
+        watchlist_list.clear() 
+        for movie in stored_data.get("watchlist", []):
+            title = movie.get("title", "Unknown")
+            watchlist_list.append(ListItem(Label(f"{title}")))    
             
     @on(Button.Pressed, "#watchlist_button")
     def view_watchlist(self) -> None:
@@ -440,6 +451,15 @@ class FlickIndex(App):
     
     #collection_actions Button {
         margin: 0 1;
+    }
+
+    .section_heading {
+        text-style: bold;
+        color: $accent;
+        margin-top: 1;
+        margin-bottom: 1;
+        border-bottom: solid $secondary;
+        width: 100%;
     }
     """
 
