@@ -170,13 +170,13 @@ class HomeScreen(Screen):
     def view_watchlist(self) -> None:
         data = load_data()
         watchlist = data.get("watchlist", [])
-        self.app.push_screen(CollectionScreen(ASCII_WATCHLIST, watchlist))
+        self.app.push_screen(CollectionScreen(ASCII_WATCHLIST, watchlist, "watchlist"))
 
     @on(Button.Pressed, "#favourites_button")
     def view_favourites(self) -> None:
         data = load_data()
         favourites = data.get("favourites", [])
-        self.app.push_screen(CollectionScreen(ASCII_FAVOURITES, favourites))
+        self.app.push_screen(CollectionScreen(ASCII_FAVOURITES, favourites, "favourites"))
 
     @on(Button.Pressed, "#quit_button")
     def action_quit_app(self) -> None:
@@ -326,18 +326,27 @@ class CollectionScreen(Screen):
     """
     A reusable screen to display specific collections - Favourites, Watchlist
     """
-    def __init__(self, title: str, movie_list: list):
+    # Bind the 'd' key to the action_remove_item method
+    BINDINGS = [("d", "remove_item", "Delete Selected")]
+    
+    def __init__(self, title: str, movie_list: list, collection_type: str):
         super().__init__()
         self.display_title = title
         self.movies = movie_list
+        self.collection_type = collection_type # e.g. favourites or watchlist
         self.movie_map = {} # Cache to map UI IDs to data
 
     def compose(self) -> ComposeResult:
         yield Header()
         with Vertical(id="collection_container"):
             yield Label(self.display_title, id="ascii_header")
+            
+            # Buttons moved ABOVE the list to fix notification overlap
+            with Horizontal(id="collection_actions"):
+                yield Button("Back to Home", id="back_to_home", variant="default")
+                yield Button("Remove Selected", id="remove_selected", variant="error")
+                
             yield ListView(id="collection_list")
-            yield Button("Back to Home", id="back_to_home", variant="default")
         yield Footer()
     
     def on_mount(self) -> None:
@@ -368,7 +377,29 @@ class CollectionScreen(Screen):
     @on(Button.Pressed, "#back_to_home")
     def close_screen(self) -> None:
         self.app.pop_screen()
-    
+
+    @on(Button.Pressed, "#remove_selected")
+    def remove_item(self) -> None:
+        list_view = self.query_one("#collection_list", ListView)
+        selected_item = list_view.highlighted_child
+        
+        if not selected_item:
+            self.notify("Error: No item selected.")
+            return
+
+        movie = self.movie_map.get(selected_item.id)
+        if not movie:
+            return
+
+        selected_item.remove()
+        title = movie.get('title', 'Unknown')
+
+        if self.collection_type == "favourites":
+            # TODO: remove_from_favourites(movie) 
+            self.notify(f"Removed '{title}' from Favourites.")
+        elif self.collection_type == "watchlist":
+            # TODO: remove_from_watchlist(movie)
+            self.notify(f"Removed '{title}' from Watchlist.")
 
 class FlickIndex(App):
     CSS = """
@@ -399,6 +430,16 @@ class FlickIndex(App):
         height: auto;
         color: $primary;
         margin-bottom: 1;
+    }
+
+    #collection_actions {
+        height: auto;
+        margin-top: 1;
+        align: center middle;
+    }
+    
+    #collection_actions Button {
+        margin: 0 1;
     }
     """
 
