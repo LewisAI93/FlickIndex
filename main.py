@@ -54,6 +54,9 @@ def search_movies(query: str, *, language: str = "en-US", page: int = 1) -> List
     # Extract relevant results using .get() so that missing fields don't crash the program
     simplified = []
     for item in results:
+        vote = item.get("vote_average")
+        if not vote or vote <= 1 or vote >= 9.9:
+            continue
         simplified.append(
             {
                 "id": item.get("id"),
@@ -144,6 +147,9 @@ def similar_movies(movie_id: int, *, language: str = "en-US", page: int = 1) -> 
 
     simplified = []
     for item in results:
+        vote = item.get("vote_average")
+        if not vote or vote <= 1 or vote >= 9.9:
+            continue
         simplified.append(
             {
                 "id": item.get("id"),
@@ -154,5 +160,84 @@ def similar_movies(movie_id: int, *, language: str = "en-US", page: int = 1) -> 
                 "popularity": item.get("popularity"),
             }
         )
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
+    return simplified
+
+def genres_list(*, language: str = "en-US") -> List[Dict[str, Any]]:
+    url = f"{TMDB_BASE_URL}/genre/movie/list"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": language,
+    }
+
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    return data.get("genres", [])
+
+def search_genre(genre_id: int, *, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    url = f"{TMDB_BASE_URL}/discover/movie"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": language,
+        "page": page,
+        "with_genres": genre_id,
+        "sort_by": "popularity.desc",
+    }
+
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    results = data.get("results", [])
+
+    simplified = []
+    for item in results:
+        vote = item.get("vote_average")
+        if not vote or vote <= 1 or vote >= 9.9:
+            continue
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "release_date": item.get("release_date"),
+                "overview": item.get("overview"),
+                "vote_average": item.get("vote_average"),
+                "popularity": item.get("popularity"),
+            }
+        )
+
+    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
+    return simplified
+
+def popular_movies(*, language: str = "en-US", page: int = 1) -> List[Dict[str, Any]]:
+    url = f"{TMDB_BASE_URL}/movie/popular"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": language,
+        "page": page,
+    }
+
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    results = data.get("results", [])
+
+    simplified = []
+    for item in results:
+        vote = item.get("vote_average")
+        if not vote or vote <= 1 or vote >= 9.9:
+            continue
+        simplified.append(
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "release_date": item.get("release_date"),
+                "overview": item.get("overview"),
+                "vote_average": item.get("vote_average"),
+                "popularity": item.get("popularity"),
+            }
+        )
+
     simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
     return simplified
