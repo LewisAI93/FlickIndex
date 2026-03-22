@@ -48,12 +48,12 @@
 }
 
 #movie_details {
-    width: 1ft;
+    width: 1fr;
     padding: 1 2;
 }
 
 #similar_pane {
-    width: 1ft;
+    width: 1fr;
     padding: 1 2;
     border-left: solid $secondary;
 }
