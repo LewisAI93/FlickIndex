@@ -1,12 +1,12 @@
 #left_pane {
-    width: 1fr;
+    width: 2fr;
     padding: 2;
 }
 
 #right_pane {
     width: 1fr;
     padding: 2;
-    border-left: solid green;
+    border-left: solid $secondary;
 }
 
 #collection_header {

@@ -45,6 +45,11 @@ ASCII_FAVOURITES = r"""
 
 class HomeScreen(Screen):
 
+    def __init__(self):
+        super().__init__()
+        self.current_results = {}
+        self.home_movie_map = {}
+
     def compose(self) -> ComposeResult:
         """
         Defines the UI layout in terminal. It is split into 2 panels.
@@ -97,7 +102,7 @@ class HomeScreen(Screen):
 
     @on(Input.Submitted, "#search_input")
     @on(Button.Pressed, "#search_button")
-    def execute_search(self) -> None:
+    async def execute_search(self) -> None:
         """
         This function runs when user searches either by pressing 'Enter'
         or pressing the search button. It reads the search input and
@@ -120,7 +125,7 @@ class HomeScreen(Screen):
         search_term = self.query_one("#search_input", Input).value
         results_list = self.query_one("#results_list", ListView)
         
-        results_list.clear()
+        await results_list.clear()
 
         if not search_term.strip():
             results_list.append(ListItem(Label("Error: Enter a search term.")))
@@ -159,7 +164,7 @@ class HomeScreen(Screen):
 
     current_results = {}
 
-    def display_results(self, results: list) -> None:
+    async def display_results(self, results: list) -> None:
         """
         Shows the results of the search in a list format. If no results are found,
         show message on screen. For each search result, get the TMDB id of the movie/
@@ -184,7 +189,7 @@ class HomeScreen(Screen):
         - get the department they are known for
         """
         results_list = self.query_one("#results_list", ListView)
-        results_list.clear()
+        await results_list.clear() # Added await
         self.current_results.clear()
         
         if not results:
@@ -243,7 +248,7 @@ class HomeScreen(Screen):
         elif event.item.id.startswith("actor_"):
             self.app.push_screen(ActorScreen(selected_item))
 
-    def display_error(self, error_msg: str) -> None:
+    async def display_error(self, error_msg: str) -> None:
         """
         Shows an error in the results list if something goes wrong.
         For example API error.
@@ -258,10 +263,10 @@ class HomeScreen(Screen):
         - add message showing API error
         """
         results_list = self.query_one("#results_list", ListView)
-        results_list.clear()
+        await results_list.clear() # Added await
         results_list.append(ListItem(Label(f"API Error: {error_msg}")))
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         """
         Lifecycle method in Textual that runs after first creating the screen
         and adds it to the UI. 
@@ -271,16 +276,16 @@ class HomeScreen(Screen):
         - refresh_side_panels: refreshes the panels with up-to-date information
         """
         init_storage()
-        self.refresh_side_panels()
+        await self.refresh_side_panels()
     
-    def on_screen_resume(self) -> None:
+    async def on_screen_resume(self) -> None:
         """
         Called when the screen resumes and becomes active again. Refreshes
         the side panels with up-to-date information
         """
-        self.refresh_side_panels()
-    
-    def refresh_side_panels(self) -> None:
+        await self.refresh_side_panels()    
+
+    async def refresh_side_panels(self) -> None:        
         """
         Loads stored data using load_data. Finds ListView with specific
         id and updates specific list with stored data. If title/ actor
@@ -292,24 +297,31 @@ class HomeScreen(Screen):
         - '#watch_preview_list' watchlist movies
         """
         stored_data = load_data()
+        self.home_movie_map.clear()
         
         recent_list = self.query_one("#recent_list", ListView)
-        recent_list.clear()
+        await recent_list.clear() # Wait for the DOM to clear
         for movie in stored_data.get("recently_viewed", []):
             title = movie.get("title", "Unknown")
-            recent_list.append(ListItem(Label(f"{title}")))
+            list_id = f"recent_{movie.get('id')}"
+            self.home_movie_map[list_id] = movie
+            recent_list.append(ListItem(Label(title), id=list_id))
 
         favourites_list = self.query_one("#favourites_list", ListView)
-        favourites_list.clear() 
+        await favourites_list.clear() # Wait for the DOM to clear
         for movie in stored_data.get("favourites", []):
             title = movie.get("title", "Unknown")
-            favourites_list.append(ListItem(Label(f"{title}")))
+            list_id = f"fav_{movie.get('id')}"
+            self.home_movie_map[list_id] = movie
+            favourites_list.append(ListItem(Label(title), id=list_id))
 
         watchlist_list = self.query_one("#watchlist_preview_list", ListView)
-        watchlist_list.clear() 
+        await watchlist_list.clear() # Wait for the DOM to clear
         for movie in stored_data.get("watchlist", []):
             title = movie.get("title", "Unknown")
-            watchlist_list.append(ListItem(Label(f"{title}")))    
+            list_id = f"watch_{movie.get('id')}"
+            self.home_movie_map[list_id] = movie
+            watchlist_list.append(ListItem(Label(title), id=list_id)) 
             
     @on(Button.Pressed, "#watchlist_button")
     def view_watchlist(self) -> None:
@@ -338,6 +350,16 @@ class HomeScreen(Screen):
         """
         self.app.exit()
 
+    @on(ListView.Selected, "#recent_list")
+    @on(ListView.Selected, "#favourites_list")
+    @on(ListView.Selected, "#watchlist_preview_list")
+    def open_sidebar_movie(self, event: ListView.Selected) -> None:
+        if not event.item.id:
+            return
+        
+        movie = self.home_movie_map.get(event.item.id)
+        if movie:
+            self.app.push_screen(MovieScreen(movie))
 
 class MovieScreen(Screen):
     def __init__(self, movie_data: dict):
@@ -407,7 +429,7 @@ class MovieScreen(Screen):
         except Exception as e:
             self.app.call_from_thread(self.display_similar_error, str(e))
 
-    def display_similar_movies(self, movies: list) -> None:
+    async def display_similar_movies(self, movies: list) -> None:
         """
         Find similar movies based on a list of movies. If no movies are
         similar, display 'No similar movies found'. If found, give details of
@@ -420,7 +442,7 @@ class MovieScreen(Screen):
         release date. If movie title is uknown, then show 'Unknown'.
         """
         list_view = self.query_one("#similar_list", ListView)
-        list_view.clear()
+        await list_view.clear() # Added await
 
         if not movies:
             list_view.append(ListItem(Label("No similar movies found.")))
@@ -434,7 +456,7 @@ class MovieScreen(Screen):
                 ListItem(Label(label_text), id=f"similar_{movie.get('id')}")
             )
 
-    def display_similar_error(self, error_msg: str) -> None:
+    async def display_similar_error(self, error_msg: str) -> None:
         """
         Error if can't load similar movies.
 
@@ -443,7 +465,7 @@ class MovieScreen(Screen):
         - error_msg(str): error message in string format
         """
         list_view = self.query_one("#similar_list", ListView)
-        list_view.clear()
+        await list_view.clear() # Added await
         list_view.append(ListItem(Label(f"Error loading similar movies: {error_msg}")))
 
     @on(ListView.Selected, "#similar_list")
@@ -706,7 +728,14 @@ class CollectionScreen(Screen):
 
 class FlickIndex(App):
     CSS_PATH = "flickindex.tcss"
-    BINDINGS = [("q", "quit", "Quit application")]
+    BINDINGS = [
+        ("q", "quit", "Quit application"),
+        ("escape", "go_back", "Go Back")
+    ]
+
+    def action_go_back(self) -> None:
+        if len(self.screen_stack) > 1:
+            self.pop_screen()
 
     def on_mount(self) -> None:
         self.push_screen(HomeScreen())
