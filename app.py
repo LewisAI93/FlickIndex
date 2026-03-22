@@ -375,7 +375,7 @@ class MovieScreen(Screen):
                 yield Label(f"Release Date: {self.movie_data.get('release_date')}")
                 yield Label(f"Rating: {self.movie_data.get('vote_average')}")
                 yield Label(" ")
-                yield Label(self.movie_data.get("overview", "No overview available."))
+                yield Label(self.movie_data.get("overview", "No overview available."), id="movie_overview")
                 yield Label(" ")
                 yield Button("Add to Favourites", id="fav_button", variant="success")
                 yield Button("Add to Watchlist", id="watch_list_button", variant="primary")
@@ -705,57 +705,7 @@ class CollectionScreen(Screen):
                 self.notify("Failed to remove item.", severity="error")
 
 class FlickIndex(App):
-    CSS = """
-    #left_pane {
-        width: 1fr;
-        padding: 2;
-    }
-    #right_pane {
-        width: 1fr;
-        padding: 2;
-        border-left: solid green;
-    }
-    
-    #collection_header {
-        width: 100%;
-        content-align: center middle;
-        text-style: bold;
-        background: $primary;
-        color: $text;
-        margin-bottom: 2;
-        padding: 1;
-        border: tall $secondary;
-    }
-
-    #ascii_header {
-        text-align: center;
-        width: 100%;
-        height: auto;
-        color: $primary;
-        margin-bottom: 1;
-    }
-
-    #collection_actions {
-        height: auto;
-        margin-top: 1;
-        align: center middle;
-    }
-    
-    #collection_actions Button {
-        margin: 0 1;
-    }
-
-    .section_heading {
-        text-style: bold;
-        color: $accent;
-        margin-top: 1;
-        margin-bottom: 1;
-        border-bottom: solid $secondary;
-        width: 100%;
-    }
-    """
-
-    
+    CSS_PATH = "flickindex.tcss"
     BINDINGS = [("q", "quit", "Quit application")]
 
     def on_mount(self) -> None:

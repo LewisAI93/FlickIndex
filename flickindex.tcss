@@ -1,0 +1,64 @@
+#left_pane {
+    width: 1fr;
+    padding: 2;
+}
+
+#right_pane {
+    width: 1fr;
+    padding: 2;
+    border-left: solid green;
+}
+
+#collection_header {
+    width: 100%;
+    content-align: center middle;
+    text-style: bold;
+    background: $primary;
+    color: $text;
+    margin-bottom: 2;
+    padding: 1;
+    border: tall $secondary;
+}
+
+#ascii_header {
+    text-align: center;
+    width: 100%;
+    height: auto;
+    color: $primary;
+    margin-bottom: 1;
+}
+
+#collection_actions {
+    height: auto;
+    margin-top: 1;
+    align: center middle;
+}
+
+#collection_actions Button {
+    margin: 0 1;
+}
+
+.section_heading {
+    text-style: bold;
+    color: $accent;
+    margin-top: 1;
+    margin-bottom: 1;
+    border-bottom: solid $secondary;
+    width: 100%;
+}
+
+#movie_details {
+    width: 1ft;
+    padding: 1 2;
+}
+
+#similar_pane {
+    width: 1ft;
+    padding: 1 2;
+    border-left: solid $secondary;
+}
+
+#movie_overview {
+    width: 100%;
+    height: auto;
+}
