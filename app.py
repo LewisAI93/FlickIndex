@@ -4,7 +4,7 @@ from textual.widgets import Header, Footer, Input, Label, Button, ListView, List
 from textual.screen import Screen
 from textual import on, work, events
 
-from main import search_movies, search_actor, similar_movies
+from main import search_movies, search_actor, similar_movies, popular_movies
 from storage_module import (
     init_storage,
     load_data,
@@ -49,6 +49,7 @@ class HomeScreen(Screen):
         super().__init__()
         self.current_results = {}
         self.home_movie_map = {}
+        self.popular_movie_map = {}
 
     def compose(self) -> ComposeResult:
         """
@@ -91,6 +92,8 @@ class HomeScreen(Screen):
                 yield Button("Search", id="search_button", variant="primary")
                 yield ListView(id="results_list")
 
+                yield Label("Trending Now", classes="section_heading")
+                yield ListView(id="popular_list")
                 # Space for popular movies section
 
             # Right column: User collections
@@ -283,6 +286,7 @@ class HomeScreen(Screen):
         """
         init_storage()
         await self.refresh_side_panels()
+        self.fetch_popular_movies_background()
     
     async def on_screen_resume(self) -> None:
         """
@@ -366,6 +370,49 @@ class HomeScreen(Screen):
         movie = self.home_movie_map.get(event.item.id)
         if movie:
             self.app.push_screen(MovieScreen(movie))
+
+    # POPULAR MOVIES
+    @work(thread=True)
+    def fetch_popular_movies_background(self) -> None:
+        try:
+            movies = popular_movies()
+            self.app.call_from_thread(self.display_popular_movies, movies)
+        except Exception as e:
+            self.app.call_from_thread(self.display_popular_error, str(e))
+
+    async def display_popular_movies(self, movies: list) -> None:
+        popular_list = self.query_one("#popular_list", ListView)
+        await popular_list.clear()
+        self.popular_movie_map.clear()
+
+        if not movies:
+            popular_list.append(ListItem(Label("No popular movies found.")))
+            return
+        
+        for movie in movies[:8]: 
+            item_id = str(movie.get("id"))
+            title = movie.get("title", "Unknown")
+            year = (movie.get("release_date") or "")[:4]
+
+            label_text = f"{title} ({year})" if year else f"{title}"
+            list_id = f"pop_{item_id}"
+
+            self.popular_movie_map[list_id] = movie
+            popular_list.append(ListItem(Label(label_text), id=list_id))
+
+    async def display_popular_error(self, error_msg: str) -> None:
+        popular_list = self.query_one("#popular_list", ListView)
+        await popular_list.clear()
+        popular_list.append(ListItem(Label(f"API Error: {error_msg}")))
+
+    @on(ListView.Selected, "#popular_list")
+    def open_popular_movie(self, event: ListView.Selected) -> None:
+        if not event.item.id:
+            return
+        
+        movie = self.popular_movie_map.get(event.item.id)
+        if movie:
+            self.app.push_screen(MovieScreen(movie))            
 
 class MovieScreen(Screen):
     def __init__(self, movie_data: dict):
