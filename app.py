@@ -734,7 +734,7 @@ class FlickIndex(App):
     ]
 
     def action_go_back(self) -> None:
-        if len(self.screen_stack) > 1:
+        if not isinstance(self.screen, HomeScreen):
             self.pop_screen()
 
     def on_mount(self) -> None:
