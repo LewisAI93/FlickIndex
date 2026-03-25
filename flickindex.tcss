@@ -1,6 +1,12 @@
 #left_pane {
+    width: 1fr;
+    padding: 2;
+}
+
+#center_pane {
     width: 2fr;
     padding: 2;
+    border-left: solid $secondary;
 }
 
 #right_pane {

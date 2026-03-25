@@ -76,18 +76,24 @@ class HomeScreen(Screen):
         yield Header()
         
         with Horizontal():
+            # Left column: History and controls
             with Vertical(id="left_pane"):
-                yield Label("Search Database", classes="section_heading")
-                yield Input(placeholder="Movie or Actor name...", id="search_input")
-                yield Button("Search", id="search_button", variant="primary")
-                yield ListView(id="results_list")
-
                 yield Label("Recently Viewed", classes="section_heading")
                 yield ListView(id="recent_list")
 
                 yield Label(" ")
                 yield Button("Quit Application", id="quit_button", variant="error")
             
+            # Center column: Search and discovery
+            with Vertical(id="center_pane"):
+                yield Label("Search Database", classes="section_heading")
+                yield Input(placeholder="Movie or Actor name...", id="search_input")
+                yield Button("Search", id="search_button", variant="primary")
+                yield ListView(id="results_list")
+
+                # Space for popular movies section
+
+            # Right column: User collections
             with Vertical(id="right_pane"):
                 yield Label("Your Favourites", classes="section_heading")
                 yield ListView(id="favourites_list")
@@ -729,7 +735,7 @@ class CollectionScreen(Screen):
 class FlickIndex(App):
     CSS_PATH = "flickindex.tcss"
     BINDINGS = [
-        ("q", "quit", "Quit application"),
+        ("q", "quit", "Quit Application"),
         ("escape", "go_back", "Go Back")
     ]
 
