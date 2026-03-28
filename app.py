@@ -141,7 +141,7 @@ class HomeScreen(Screen):
         sorts in descending order of popularity and raises an exception if something
         goes wrong and sends it to the UI as a display error.
 
-        Parameters:
+        Args:
         - self: 
         - query (str): movie or actor name
 
@@ -225,7 +225,7 @@ class HomeScreen(Screen):
         Decorator:
         - listens for a selected event from the results list
 
-        Parameters:
+        Args:
         - self
         - event: selected item from search results list
 
@@ -253,7 +253,7 @@ class HomeScreen(Screen):
         Shows an error in the results list if something goes wrong.
         For example API error.
 
-        Parameters:
+        Args:
         - self
         - error_msg(str): error message of what goes wrong
 
@@ -440,7 +440,7 @@ class MovieScreen(Screen):
         similar, display 'No similar movies found'. If found, give details of
         the movies.
 
-        Parameters:
+        Args:
         - movies(list): list of movies that are used to find similar movies
 
         Append similar movies to a list based on its id. Show movie title and
@@ -465,7 +465,7 @@ class MovieScreen(Screen):
         """
         Error if can't load similar movies.
 
-        Parameters:
+        Args:
         - self
         - error_msg(str): error message in string format
         """
@@ -732,6 +732,9 @@ class CollectionScreen(Screen):
                 self.notify("Failed to remove item.", severity="error")
 
 class FlickIndex(App):
+    """
+    Defines how the app starts, keybindings and navigation between screens
+    """
     CSS_PATH = "flickindex.tcss"
     BINDINGS = [
         ("q", "quit", "Quit application"),
