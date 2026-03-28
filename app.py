@@ -354,6 +354,11 @@ class HomeScreen(Screen):
     @on(ListView.Selected, "#favourites_list")
     @on(ListView.Selected, "#watchlist_preview_list")
     def open_sidebar_movie(self, event: ListView.Selected) -> None:
+        """
+        Checks if selected item has an id. If there is no id,
+        function stops. Afterwards, find a movie from the dictionary, if
+        it exists, open a new screen
+        """
         if not event.item.id:
             return
         
