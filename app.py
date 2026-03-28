@@ -11,6 +11,8 @@ from storage_module import (
     add_to_favourites,
     add_to_watchlist,
     add_to_recently_viewed,
+    remove_from_favourites,
+    remove_from_watchlist
 )
 
 # ===============
@@ -42,6 +44,11 @@ ASCII_FAVOURITES = r"""
 # =====================
 
 class HomeScreen(Screen):
+
+    def __init__(self):
+        super().__init__()
+        self.current_results = {}
+        self.home_movie_map = {}
 
     def compose(self) -> ComposeResult:
         """
@@ -95,7 +102,7 @@ class HomeScreen(Screen):
 
     @on(Input.Submitted, "#search_input")
     @on(Button.Pressed, "#search_button")
-    def execute_search(self) -> None:
+    async def execute_search(self) -> None:
         """
         This function runs when user searches either by pressing 'Enter'
         or pressing the search button. It reads the search input and
@@ -118,7 +125,7 @@ class HomeScreen(Screen):
         search_term = self.query_one("#search_input", Input).value
         results_list = self.query_one("#results_list", ListView)
         
-        results_list.clear()
+        await results_list.clear()
 
         if not search_term.strip():
             results_list.append(ListItem(Label("Error: Enter a search term.")))
@@ -157,7 +164,7 @@ class HomeScreen(Screen):
 
     current_results = {}
 
-    def display_results(self, results: list) -> None:
+    async def display_results(self, results: list) -> None:
         """
         Shows the results of the search in a list format. If no results are found,
         show message on screen. For each search result, get the TMDB id of the movie/
@@ -182,7 +189,7 @@ class HomeScreen(Screen):
         - get the department they are known for
         """
         results_list = self.query_one("#results_list", ListView)
-        results_list.clear()
+        await results_list.clear() # Added await
         self.current_results.clear()
         
         if not results:
@@ -241,7 +248,7 @@ class HomeScreen(Screen):
         elif event.item.id.startswith("actor_"):
             self.app.push_screen(ActorScreen(selected_item))
 
-    def display_error(self, error_msg: str) -> None:
+    async def display_error(self, error_msg: str) -> None:
         """
         Shows an error in the results list if something goes wrong.
         For example API error.
@@ -256,10 +263,10 @@ class HomeScreen(Screen):
         - add message showing API error
         """
         results_list = self.query_one("#results_list", ListView)
-        results_list.clear()
+        await results_list.clear() # Added await
         results_list.append(ListItem(Label(f"API Error: {error_msg}")))
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         """
         Lifecycle method in Textual that runs after first creating the screen
         and adds it to the UI. 
@@ -269,16 +276,16 @@ class HomeScreen(Screen):
         - refresh_side_panels: refreshes the panels with up-to-date information
         """
         init_storage()
-        self.refresh_side_panels()
+        await self.refresh_side_panels()
     
-    def on_screen_resume(self) -> None:
+    async def on_screen_resume(self) -> None:
         """
         Called when the screen resumes and becomes active again. Refreshes
         the side panels with up-to-date information
         """
-        self.refresh_side_panels()
-    
-    def refresh_side_panels(self) -> None:
+        await self.refresh_side_panels()    
+
+    async def refresh_side_panels(self) -> None:        
         """
         Loads stored data using load_data. Finds ListView with specific
         id and updates specific list with stored data. If title/ actor
@@ -290,24 +297,31 @@ class HomeScreen(Screen):
         - '#watch_preview_list' watchlist movies
         """
         stored_data = load_data()
+        self.home_movie_map.clear()
         
         recent_list = self.query_one("#recent_list", ListView)
-        recent_list.clear()
+        await recent_list.clear() # Wait for the DOM to clear
         for movie in stored_data.get("recently_viewed", []):
             title = movie.get("title", "Unknown")
-            recent_list.append(ListItem(Label(f"{title}")))
+            list_id = f"recent_{movie.get('id')}"
+            self.home_movie_map[list_id] = movie
+            recent_list.append(ListItem(Label(title), id=list_id))
 
         favourites_list = self.query_one("#favourites_list", ListView)
-        favourites_list.clear() 
+        await favourites_list.clear() # Wait for the DOM to clear
         for movie in stored_data.get("favourites", []):
             title = movie.get("title", "Unknown")
-            favourites_list.append(ListItem(Label(f"{title}")))
+            list_id = f"fav_{movie.get('id')}"
+            self.home_movie_map[list_id] = movie
+            favourites_list.append(ListItem(Label(title), id=list_id))
 
         watchlist_list = self.query_one("#watchlist_preview_list", ListView)
-        watchlist_list.clear() 
+        await watchlist_list.clear() # Wait for the DOM to clear
         for movie in stored_data.get("watchlist", []):
             title = movie.get("title", "Unknown")
-            watchlist_list.append(ListItem(Label(f"{title}")))    
+            list_id = f"watch_{movie.get('id')}"
+            self.home_movie_map[list_id] = movie
+            watchlist_list.append(ListItem(Label(title), id=list_id)) 
             
     @on(Button.Pressed, "#watchlist_button")
     def view_watchlist(self) -> None:
@@ -336,6 +350,16 @@ class HomeScreen(Screen):
         """
         self.app.exit()
 
+    @on(ListView.Selected, "#recent_list")
+    @on(ListView.Selected, "#favourites_list")
+    @on(ListView.Selected, "#watchlist_preview_list")
+    def open_sidebar_movie(self, event: ListView.Selected) -> None:
+        if not event.item.id:
+            return
+        
+        movie = self.home_movie_map.get(event.item.id)
+        if movie:
+            self.app.push_screen(MovieScreen(movie))
 
 class MovieScreen(Screen):
     def __init__(self, movie_data: dict):
@@ -373,7 +397,7 @@ class MovieScreen(Screen):
                 yield Label(f"Release Date: {self.movie_data.get('release_date')}")
                 yield Label(f"Rating: {self.movie_data.get('vote_average')}")
                 yield Label(" ")
-                yield Label(self.movie_data.get("overview", "No overview available."))
+                yield Label(self.movie_data.get("overview", "No overview available."), id="movie_overview")
                 yield Label(" ")
                 yield Button("Add to Favourites", id="fav_button", variant="success")
                 yield Button("Add to Watchlist", id="watch_list_button", variant="primary")
@@ -405,7 +429,7 @@ class MovieScreen(Screen):
         except Exception as e:
             self.app.call_from_thread(self.display_similar_error, str(e))
 
-    def display_similar_movies(self, movies: list) -> None:
+    async def display_similar_movies(self, movies: list) -> None:
         """
         Find similar movies based on a list of movies. If no movies are
         similar, display 'No similar movies found'. If found, give details of
@@ -418,7 +442,7 @@ class MovieScreen(Screen):
         release date. If movie title is uknown, then show 'Unknown'.
         """
         list_view = self.query_one("#similar_list", ListView)
-        list_view.clear()
+        await list_view.clear() # Added await
 
         if not movies:
             list_view.append(ListItem(Label("No similar movies found.")))
@@ -432,7 +456,7 @@ class MovieScreen(Screen):
                 ListItem(Label(label_text), id=f"similar_{movie.get('id')}")
             )
 
-    def display_similar_error(self, error_msg: str) -> None:
+    async def display_similar_error(self, error_msg: str) -> None:
         """
         Error if can't load similar movies.
 
@@ -441,7 +465,7 @@ class MovieScreen(Screen):
         - error_msg(str): error message in string format
         """
         list_view = self.query_one("#similar_list", ListView)
-        list_view.clear()
+        await list_view.clear() # Added await
         list_view.append(ListItem(Label(f"Error loading similar movies: {error_msg}")))
 
     @on(ListView.Selected, "#similar_list")
@@ -473,19 +497,25 @@ class MovieScreen(Screen):
     def save_favourite(self) -> None:
         """
         When '#fav_button' is pressed, add movie to favourites and 
-        display message
+        display message. Checks for duplicates.
         """
-        add_to_favourites(self.movie_data)
-        self.notify("Added to Favourites!")
+        success = add_to_favourites(self.movie_data)
+        if success:
+            self.notify("Added to Favourites!", severity="success")
+        else:
+            self.notify("Already in Favourites.", severity="warning")
 
     @on(Button.Pressed, "#watch_list_button")
     def save_watchlist(self) -> None:
         """
         When '#watch_list_button' is pressed, add movie to
-        watchlist and display message
+        watchlist and display message. Checks for duplicates.
         """
-        add_to_watchlist(self.movie_data)
-        self.notify("Added to Watchlist!")
+        success = add_to_watchlist(self.movie_data)
+        if success:
+            self.notify("Added to Watchlist!", severity="success")
+        else:
+            self.notify("Already in Watchlist.", severity="warning")
 
 class ActorScreen(Screen):
     def __init__(self, actor_data: dict):
@@ -653,87 +683,59 @@ class CollectionScreen(Screen):
         self.app.pop_screen()
 
     @on(Button.Pressed, "#remove_selected")
-    def remove_item(self) -> None:
+    def button_remove_item(self) -> None:
+        """Triggered by clicking the remove button."""
+        self.execute_removal()
+
+    def action_remove_item(self) -> None:
+        """Triggered by pressing 'd' (mapped via BINDINGS)."""
+        self.execute_removal()
+
+    def execute_removal(self) -> None:
         """
-        When '#remove_selected' button is pressed it deletes the selected item.
-        If no item is selected, raises an error. It looks up the data
-        of the movie and removes it from the UI. It notifies the user
-        once an item has been deleted.
+        Deletes the selected item. If no item is selected, raises an error. 
+        Looks up the integer ID, removes it from storage, and removes it from the UI.
         """
         list_view = self.query_one("#collection_list", ListView)
         selected_item = list_view.highlighted_child
         
         if not selected_item:
-            self.notify("Error: No item selected.")
+            self.notify("Error: No item selected.", severity="error")
             return
 
         movie = self.movie_map.get(selected_item.id)
         if not movie:
             return
 
-        selected_item.remove()
+        movie_id = movie.get('id')
         title = movie.get('title', 'Unknown')
 
         if self.collection_type == "favourites":
-            # TODO: remove_from_favourites(movie) 
-            self.notify(f"Removed '{title}' from Favourites.")
+            success = remove_from_favourites(movie_id) 
+            if success:
+                selected_item.remove()
+                self.notify(f"Removed '{title}' from Favourites.", severity="success")
+            else:
+                self.notify("Failed to remove item.", severity="error")
+
         elif self.collection_type == "watchlist":
-            # TODO: remove_from_watchlist(movie)
-            self.notify(f"Removed '{title}' from Watchlist.")
+            success = remove_from_watchlist(movie_id)
+            if success:
+                selected_item.remove()
+                self.notify(f"Removed '{title}' from Watchlist.", severity="success")
+            else:
+                self.notify("Failed to remove item.", severity="error")
 
 class FlickIndex(App):
-    CSS = """
-    #left_pane {
-        width: 1fr;
-        padding: 2;
-    }
-    #right_pane {
-        width: 1fr;
-        padding: 2;
-        border-left: solid green;
-    }
-    
-    #collection_header {
-        width: 100%;
-        content-align: center middle;
-        text-style: bold;
-        background: $primary;
-        color: $text;
-        margin-bottom: 2;
-        padding: 1;
-        border: tall $secondary;
-    }
+    CSS_PATH = "flickindex.tcss"
+    BINDINGS = [
+        ("q", "quit", "Quit application"),
+        ("escape", "go_back", "Go Back")
+    ]
 
-    #ascii_header {
-        text-align: center;
-        width: 100%;
-        height: auto;
-        color: $primary;
-        margin-bottom: 1;
-    }
-
-    #collection_actions {
-        height: auto;
-        margin-top: 1;
-        align: center middle;
-    }
-    
-    #collection_actions Button {
-        margin: 0 1;
-    }
-
-    .section_heading {
-        text-style: bold;
-        color: $accent;
-        margin-top: 1;
-        margin-bottom: 1;
-        border-bottom: solid $secondary;
-        width: 100%;
-    }
-    """
-
-    
-    BINDINGS = [("q", "quit", "Quit application")]
+    def action_go_back(self) -> None:
+        if not isinstance(self.screen, HomeScreen):
+            self.pop_screen()
 
     def on_mount(self) -> None:
         self.push_screen(HomeScreen())

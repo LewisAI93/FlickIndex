@@ -4,37 +4,53 @@ import os
 # Constant for data file name
 DATA_FILE = "user_data.json"
 
+# Cached in-memory storage
+data_cache = None
+
 
 def init_storage():
     """
     Creates the JSON file if it does not exist.
-    Prevents errors when loading data.
+    Loads the data into memory cache.
     """
+    global data_cache
+
     if not os.path.exists(DATA_FILE):
-        data = {
+        data_cache = {
             "favourites": [],
             "watchlist": [],
             "recently_viewed": []
         }
 
         with open(DATA_FILE, "w") as file:
-            json.dump(data, file, indent=4)
+            json.dump(data_cache, file, indent=4)
+
+    else:
+        with open(DATA_FILE, "r") as file:
+            data_cache = json.load(file)
 
 
 def load_data():
     """
-    Loads data from JSON file and returns it as a dictionary.
+    Returns cached data instead of reading file every time.
     """
-    with open(DATA_FILE, "r") as file:
-        return json.load(file)
+    global data_cache
+
+    if data_cache is None:
+        with open(DATA_FILE, "r") as file:
+            data_cache = json.load(file)
+
+    return data_cache
 
 
-def save_data(data):
+def save_data():
     """
-    Saves the updated dictionary back into JSON file.
+    Saves cached data to JSON file.
     """
+    global data_cache
+
     with open(DATA_FILE, "w") as file:
-        json.dump(data, file, indent=4)
+        json.dump(data_cache, file, indent=4)
 
 
 def add_to_watchlist(movie):
@@ -46,12 +62,13 @@ def add_to_watchlist(movie):
 
     for existing_movie in data["watchlist"]:
         if existing_movie["id"] == movie["id"]:
-            print("Movie already in watchlist.")
-            return
+            return False
 
     data["watchlist"].append(movie)
-    save_data(data)
-    print("Movie added to watchlist.")
+
+    save_data()
+
+    return True
 
 
 def remove_from_watchlist(movie_id):
@@ -60,13 +77,19 @@ def remove_from_watchlist(movie_id):
     """
     data = load_data()
 
+    original_length = len(data["watchlist"])
+
     data["watchlist"] = [
         movie for movie in data["watchlist"]
         if movie["id"] != movie_id
     ]
 
-    save_data(data)
-    print("Movie removed from watchlist.")
+    if len(data["watchlist"]) == original_length:
+        return False
+
+    save_data()
+
+    return True
 
 
 def add_to_favourites(movie):
@@ -78,12 +101,13 @@ def add_to_favourites(movie):
 
     for existing_movie in data["favourites"]:
         if existing_movie["id"] == movie["id"]:
-            print("Movie already in favourites.")
-            return
+            return False
 
     data["favourites"].append(movie)
-    save_data(data)
-    print("Movie added to favourites.")
+
+    save_data()
+
+    return True
 
 
 def remove_from_favourites(movie_id):
@@ -92,13 +116,19 @@ def remove_from_favourites(movie_id):
     """
     data = load_data()
 
+    original_length = len(data["favourites"])
+
     data["favourites"] = [
         movie for movie in data["favourites"]
         if movie["id"] != movie_id
     ]
 
-    save_data(data)
-    print("Movie removed from favourites.")
+    if len(data["favourites"]) == original_length:
+        return False
+
+    save_data()
+
+    return True
 
 
 def add_to_recently_viewed(movie):
@@ -108,7 +138,7 @@ def add_to_recently_viewed(movie):
     """
     data = load_data()
 
-    # Remove if already exists (so it moves to top)
+    # Remove if already exists
     data["recently_viewed"] = [
         m for m in data["recently_viewed"]
         if m["id"] != movie["id"]
@@ -120,4 +150,6 @@ def add_to_recently_viewed(movie):
     # Keep only last 10
     data["recently_viewed"] = data["recently_viewed"][:10]
 
-    save_data(data)
+    save_data()
+
+    return True
