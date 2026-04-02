@@ -25,7 +25,7 @@ FlickIndex is a simple movie discovery application that allows you to search for
 
 - Install dependencies: `pip install -r requirements.txt`
 
-- Start the application:` python3 app.py`
+- Start the application: `python3 app.py`
 
 
 ## Basic Controls
@@ -38,6 +38,6 @@ FlickIndex is a simple movie discovery application that allows you to search for
 
 - Standard Search: Type a movie or actor name and press Enter.
 
-- Genre Search: Type `genre`:  followed by the genre name (e.g., genre: sci-fi).
+- Genre Search: Type `genre:`  followed by the genre name (e.g., genre: sci-fi).
 
 - Manage Collections: In your Favourites or Watchlist, select an item and press d to delete it.
