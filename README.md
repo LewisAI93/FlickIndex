@@ -13,3 +13,31 @@ FlickIndex is a simple movie discovery application that allows you to search for
 - ⭐ Favourites list
 - 🍿 Watch list
 - 🕒 Recently viewed list
+
+
+## Setup & Run
+
+- Request an API key from TMDB - https://developer.themoviedb.org/docs/getting-started
+
+- Create a `.env` file in the project folder and add your key: `TMDB_API_KEY=your_api_key_here`
+
+- Create and activate a venv: `python -m venv venv` > `source venv/bin/activate`
+
+- Install dependencies: `pip install -r requirements.txt`
+
+- Start the application:` python3 app.py`
+
+
+## Basic Controls
+
+- Mouse compatible.
+
+- Navigate: Use the mouse, or press `Tab` / `Shift+Tab` to move focus and Enter to select.
+
+- Go Back: Press `Escape` at any time to return to the previous screen.
+
+- Standard Search: Type a movie or actor name and press Enter.
+
+- Genre Search: Type `genre`:  followed by the genre name (e.g., genre: sci-fi).
+
+- Manage Collections: In your Favourites or Watchlist, select an item and press d to delete it.
