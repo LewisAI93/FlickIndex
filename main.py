@@ -133,35 +133,84 @@ def similar_movies(movie_id: int, *, language: str = "en-US", page: int = 1) -> 
     - a list of dictionaries containing movie information. The list is sorted by popularity in 
     descending order
     """
-    url = f"{TMDB_BASE_URL}/movie/{movie_id}/similar"
-    params = {
+    details_url = f"{TMDB_BASE_URL}/movie/{movie_id}"
+    details_params = {
         "api_key": TMDB_API_KEY,
         "language": language,
-        "page": page,
     }
+    details_resp = requests.get(details_url, params=details_params, timeout=10)
+    details_resp.raise_for_status()
+    details = details_resp.json()
 
-    response = requests.get(url, params=params, timeout=10)
-    response.raise_for_status()
-    data = response.json()
-    results = data.get("results", [])
+    similar: List[Dict[str, Any]] = []
 
-    simplified = []
-    for item in results:
-        vote = item.get("vote_average")
-        if not vote or vote <= 1 or vote >= 9.9:
-            continue
-        simplified.append(
-            {
-                "id": item.get("id"),
-                "title": item.get("title"),
-                "release_date": item.get("release_date"),
-                "overview": item.get("overview"),
-                "vote_average": item.get("vote_average"),
-                "popularity": item.get("popularity"),
+    collection = details.get("belongs_to_collection")
+    if collection:
+        collection_id = collection.get("id")
+        if collection_id:
+            collection_url = f"{TMDB_BASE_URL}/collection/{collection_id}"
+            collection_params = {
+                "api_key": TMDB_API_KEY,
+                "language": language,
             }
-        )
-    simplified.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
-    return simplified
+            col_resp = requests.get(collection_url, params=collection_params, timeout=10)
+            col_resp.raise_for_status()
+            col_data = col_resp.json()
+            parts = col_data.get("parts", [])
+
+            parts.sort(key=lambda p: (p.get("release_date") or "9999-99-99"))
+
+            for item in parts:
+                if item.get("id") == movie_id:
+                    continue
+                vote = item.get("vote_average")
+                if not vote or vote <= 1 or vote >= 9.9:
+                    continue
+                similar.append(
+                    {
+                        "id": item.get("id"),
+                        "title": item.get("title"),
+                        "release_date": item.get("release_date"),
+                        "overview": item.get("overview"),
+                        "vote_average": item.get("vote_average"),
+                        "popularity": item.get("popularity"),
+                    }
+                )
+
+    if len(similar) < 10:
+        rec_url = f"{TMDB_BASE_URL}/movie/{movie_id}/recommendations"
+        rec_params = {
+            "api_key": TMDB_API_KEY,
+            "language": language,
+            "page": page,
+        }
+        rec_resp = requests.get(rec_url, params=rec_params, timeout=10)
+        rec_resp.raise_for_status()
+        rec_data = rec_resp.json()
+        rec_results = rec_data.get("results", [])
+
+        existing_ids = {m["id"] for m in similar}
+        for item in rec_results:
+            mid = item.get("id")
+            if not mid or mid in existing_ids or mid == movie_id:
+                continue
+            vote = item.get("vote_average")
+            if not vote or vote <= 1 or vote >= 9.9:
+                continue
+            similar.append(
+                {
+                    "id": item.get("id"),
+                    "title": item.get("title"),
+                    "release_date": item.get("release_date"),
+                    "overview": item.get("overview"),
+                    "vote_average": item.get("vote_average"),
+                    "popularity": item.get("popularity"),
+                }
+            )
+            existing_ids.add(mid)
+
+    similar.sort(key=lambda p: p.get("popularity") or 0, reverse=True)
+    return similar
 
 def genres_list(*, language: str = "en-US") -> List[Dict[str, Any]]:
     url = f"{TMDB_BASE_URL}/genre/movie/list"
