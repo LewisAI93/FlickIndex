@@ -8,7 +8,7 @@ from textual.widgets import Header, Footer, Input, Label, Button, ListView, List
 from textual.screen import Screen
 from textual import on, work, events
 
-from main import search_movies, search_actor, similar_movies, popular_movies
+from main import search_movies, search_actor, similar_movies, popular_movies, genres_list, search_genre
 from storage_module import (
     init_storage,
     load_data,
@@ -67,6 +67,7 @@ class HomeScreen(Screen):
         self.current_results = {}
         self.home_movie_map = {}
         self.popular_movie_map = {}
+        self.genre_map = {}
 
     def compose(self) -> ComposeResult:
         """
@@ -156,6 +157,18 @@ class HomeScreen(Screen):
         if not search_term.strip():
             results_list.append(ListItem(Label("Error: Enter a search term.")))
             return
+        
+        if search_term.lower().startswith("genre:"):
+            genre_query = search_term.split(":", 1)[1].strip().lower()
+            genre_id = self.genre_map.get(genre_query)
+
+            if not genre_id:
+                results_list.append(ListItem(Label(f"Error: Unknown genre '{genre_query}'.")))
+                return
+            
+            results_list.append(ListItem(Label(f"Searching TMDB for genre: {genre_query.title()}...")))
+            self.fetch_genre_results_background(genre_id)
+            return      
         
         results_list.append(ListItem(Label(f"Searching TMDB for '{search_term}'...")))
         self.fetch_search_results_background(search_term)
@@ -304,6 +317,7 @@ class HomeScreen(Screen):
         init_storage()
         await self.refresh_side_panels()
         self.fetch_popular_movies_background()
+        self.fetch_genres_background()
     
     async def on_screen_resume(self) -> None:
         """
@@ -429,7 +443,37 @@ class HomeScreen(Screen):
         
         movie = self.popular_movie_map.get(event.item.id)
         if movie:
-            self.app.push_screen(MovieScreen(movie))            
+            self.app.push_screen(MovieScreen(movie))
+
+    @work(thread=True)
+    def fetch_genres_background(self) -> None:
+        try:
+            genres = genres_list()
+            self.app.call_from_thread(self.build_genre_map, genres)
+        except Exception:
+            pass
+    
+    def build_genre_map(self, genres: list) -> None:
+        self.genre_map.clear()
+        for genre in genres:
+            name = genre.get("name", "").lower()
+            genre_id = genre.get("id")
+            if name and genre_id:
+                self.genre_map[name] = genre_id
+
+        if "science fiction" in self.genre_map:
+            self.genre_map["sci-fi"] = self.genre_map["science fiction"]
+        if "romance" in self.genre_map:
+            self.genre_map["rom-com"] = self.genre_map["romance"]                
+
+    @work(thread=True)
+    def fetch_genre_results_background(self, genre_id: int) -> None:
+        try:
+            movies = search_genre(genre_id)
+            self.app.call_from_thread(self.display_results, movies)
+        except Exception as e:
+            self.app.call_from_thread(self.display_error, str(e))
+        
 
 class MovieScreen(Screen):
     def __init__(self, movie_data: dict):
