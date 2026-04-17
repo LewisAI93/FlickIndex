@@ -39,6 +39,25 @@ ASCII_FAVOURITES = r"""
 .::        .:: .:::    .::       .::      .::.::.:::   .::   .::   .::::   .:: .::
 """
 
+ASCII_TITLE = r'''                                                                      
+ mmmmmm ""#      "           #      mmmmm             #               
+ #        #    mmm     mmm   #   m    #    m mm    mmm#   mmm   m   m 
+ #mmmmm   #      #    #"  "  # m"     #    #"  #  #" "#  #"  #   #m#  
+ #        #      #    #      #"#      #    #   #  #   #  #""""   m#m  
+ #        "mm  mm#mm  "#mm"  #  "m  mm#mm  #   #  "#m##  "#mm"  m" "m 
+'''
+
+
+# ASCII_TITLE = r"""
+# ░        ░░  ░░░░░░░░        ░░░      ░░░  ░░░░  ░░        ░░   ░░░  ░░       ░░░        ░░  ░░░░  ░
+# ▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒  ▒▒▒▒▒▒  ▒▒▒▒▒    ▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒▒  ▒▒  ▒▒
+# ▓      ▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓▓▓▓▓     ▓▓▓▓▓▓▓▓  ▓▓▓▓▓  ▓  ▓  ▓▓  ▓▓▓▓  ▓▓      ▓▓▓▓▓▓    ▓▓▓
+# █  ████████  ███████████  █████  ████  ██  ███  ██████  █████  ██    ██  ████  ██  █████████  ██  ██
+# █  ████████        ██        ███      ███  ████  ██        ██  ███   ██       ███        ██  ████  █
+                                                                                                      
+# """
+
+
 # =====================
 # TEXTUAL APP INTERFACE
 # =====================
@@ -76,41 +95,42 @@ class HomeScreen(Screen):
         - Footer 
         """
         yield Header()
-        
-        with Horizontal():
-            # Left column: History and controls
-            with Vertical(id="left_pane"):
-                yield Label("Recently Viewed", classes="section_heading")
-                yield ListView(id="recent_list")
-
-                yield Label(" ")
-                yield Button("Quit Application", id="quit_button", variant="error")
+        with Vertical(id="screen_frame"): 
+            yield Label(" [ STATUS: SYSTEM ONLINE | DB: TMDB v3.0 ] ", id="system_status")
             
-            # Center column: Search and discovery
-            with Vertical(id="center_pane"):
-                yield Label("Search Database", classes="section_heading")
-                yield Input(placeholder="Movie, Actor, or 'genre: action'...", id="search_input")
+            # 1. MOVED TO TOP: This anchors the whole UI and aligns the columns below
+            yield Label(ASCII_TITLE, id="main_title")
 
-                # Side-by-side buttons
-                with Horizontal(id="search_button_row"):
-                    yield Button("Search", id="search_button", variant="primary")
-                    yield Button("Browse Genres", id="browse_genres_button")
-                yield ListView(id="results_list")
-
-                yield Label("Trending Now", classes="section_heading")
-                yield ListView(id="popular_list")
-                # Space for popular movies section
-
-            # Right column: User collections
-            with Vertical(id="right_pane"):
-                yield Label("Your Favourites", classes="section_heading")
-                yield ListView(id="favourites_list")
-                yield Button("View Favourites", id="favourites_button", variant="primary")
+            with Horizontal():
+                # 2. Left column
+                with Vertical(id="left_pane"):
+                    yield Label("Recently Viewed", classes="side_heading")
+                    yield ListView(id="recent_list")
+                    yield Button("Quit Application", id="quit_button")
                 
-                yield Label("Your Watchlist", classes="section_heading")
-                yield ListView(id="watchlist_preview_list")
-                yield Button("View Watchlist", id="watchlist_button", variant="primary")
+                # 3. Center column
+                with Vertical(id="center_pane"):
+                    yield Label("Search Database", classes="section_heading")
+                    yield Input(placeholder="Movie, Actor, or 'genre: action'...", id="search_input")
 
+                    with Horizontal(id="search_button_row"):
+                        yield Button("Search", id="search_button")
+                        yield Button("Browse Genres", id="browse_genres_button")
+                    
+                    yield ListView(id="results_list")
+
+                    yield Label("Trending Now", classes="section_heading")
+                    yield ListView(id="popular_list")
+
+                # 4. Right column
+                with Vertical(id="right_pane"):
+                    yield Label("Your Favourites", classes="side_heading")
+                    yield ListView(id="favourites_list")
+                    yield Button("View Favourites", id="favourites_button")
+                    
+                    yield Label("Your Watchlist", classes="side_heading")
+                    yield ListView(id="watchlist_preview_list")
+                    yield Button("View Watchlist", id="watchlist_button")
 
         yield Footer()
 
@@ -305,6 +325,10 @@ class HomeScreen(Screen):
         await self.refresh_side_panels()
         self.fetch_popular_movies_background()
         self.fetch_genres_background()
+
+        # Set default focus to the search input when the app loads
+        search_input = self.query_one("#search_input", Input)
+        search_input.focus()
     
     async def on_screen_resume(self) -> None:
         """
@@ -505,21 +529,35 @@ class MovieScreen(Screen):
         - 'Back' button
         """
         yield Header()
-        with Horizontal():
-            with Vertical(id="movie_details"):
-                yield Label(f"Title: {self.movie_data.get('title')}")
-                yield Label(f"Release Date: {self.movie_data.get('release_date')}")
-                yield Label(f"Rating: {self.movie_data.get('vote_average')}")
-                yield Label(" ")
-                yield Label(self.movie_data.get("overview", "No overview available."), id="movie_overview")
-                yield Label(" ")
-                yield Button("Add to Favourites", id="fav_button", variant="success")
-                yield Button("Add to Watchlist", id="watch_list_button", variant="primary")
-                yield Button("Back", id="back_button", variant="default")
-            with Vertical(id="similar_pane"):
-                yield Label("Similar Movies")
-                yield ListView(id="similar_list")
-        yield Footer()
+        with Vertical(id="screen_frame"):
+            with Horizontal():
+                # Main Details Pane
+                with Vertical(id="movie_details"):
+                    # 1. Bold Title Block
+                    title = self.movie_data.get('title', 'Unknown Title')
+                    year = (self.movie_data.get("release_date") or "")[:4]
+                    yield Label(f" {title} ({year}) ", id="movie_title_header")
+                    
+                    # 2. Core Info
+                    release = self.movie_data.get('release_date', 'Unknown')
+                    rating = self.movie_data.get('vote_average', 'N/A')
+                    yield Label(f"Release: {release}  |  Rating: {rating}", id="movie_meta")
+                    
+                    # 3. Synopsis with breathing room
+                    yield Label("Synopsis", classes="side_heading")
+                    yield Label(self.movie_data.get("overview", "No overview available."), id="movie_overview")
+                    
+                    # 4. Action Buttons (Side-by-side)
+                    with Horizontal(id="movie_action_buttons"):
+                        yield Button("Add to Favourites", id="fav_button", variant="success")
+                        yield Button("Add to Watchlist", id="watch_list_button", variant="primary")
+                        yield Button("Back", id="back_button", variant="default")
+
+                # Similar Movies Pane (Using the new side heading)
+                with Vertical(id="similar_pane"):
+                    yield Label("Similar Movies", classes="side_heading")
+                    yield ListView(id="similar_list")
+            yield Footer()
 
     def on_mount(self) -> None:
         """
@@ -740,11 +778,9 @@ class CollectionScreen(Screen):
         that contain header and buttons ('Back to Home' and 'Remove Selected') 
         and a ListView for collected items
         """
-        yield Header()
-        with Vertical(id="collection_container"):
+        with Vertical(id="screen_frame"):
             yield Label(self.display_title, id="ascii_header")
             
-            # Buttons moved ABOVE the list to fix notification overlap
             with Horizontal(id="collection_actions"):
                 yield Button("Back to Home", id="back_to_home", variant="default")
                 yield Button("Remove Selected", id="remove_selected", variant="error")
@@ -850,17 +886,18 @@ class GenreScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        with Horizontal():
-            # Sidebar for genre selection
-            with Vertical(id="genre_sidebar"):
-                yield Label("Genres", classes="section_heading")
-                yield ListView(id="genre_list")
-                yield Button("Back to Home", id="back_button", variant="default")
-            
-            # Main area for results
-            with Vertical(id="genre_results_pane"):
-                yield Label("Select a genre to browse movies", id="genre_results_header", classes="section_heading")
-                yield ListView(id="genre_results_list")
+        with Vertical(id="screen_frame"):
+            with Horizontal():
+                # Sidebar for genre selection
+                with Vertical(id="genre_sidebar"):
+                    yield Label("Genres", classes="section_heading")
+                    yield ListView(id="genre_list")
+                    yield Button("Back to Home", id="back_button", variant="default")
+                
+                # Main area for results
+                with Vertical(id="genre_results_pane"):
+                    yield Label("Select a genre to browse movies", id="genre_results_header", classes="section_heading")
+                    yield ListView(id="genre_results_list")
         yield Footer()
 
     def on_mount(self) -> None:
