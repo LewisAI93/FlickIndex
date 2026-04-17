@@ -68,3 +68,12 @@
     width: 100%;
     height: auto;
 }
+
+#search_button_row {
+    height: auto;
+    margin-bottom: 1;
+}
+
+#search_button_row Button {
+    width: 50%;
+}

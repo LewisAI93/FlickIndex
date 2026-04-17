@@ -89,8 +89,12 @@ class HomeScreen(Screen):
             # Center column: Search and discovery
             with Vertical(id="center_pane"):
                 yield Label("Search Database", classes="section_heading")
-                yield Input(placeholder="Movie or Actor name...", id="search_input")
-                yield Button("Search", id="search_button", variant="primary")
+                yield Input(placeholder="Movie, Actor, or 'genre: action'...", id="search_input")
+
+                # Side-by-side buttons
+                with Horizontal(id="search_button_row"):
+                    yield Button("Search", id="search_button", variant="primary")
+                    yield Button("Browse Genres", id="browse_genres_button")
                 yield ListView(id="results_list")
 
                 yield Label("Trending Now", classes="section_heading")
@@ -456,6 +460,18 @@ class HomeScreen(Screen):
             self.app.call_from_thread(self.display_results, movies)
         except Exception as e:
             self.app.call_from_thread(self.display_error, str(e))
+
+    @on(Button.Pressed, "#browse_genres_button")
+    def open_genre_browser(self) -> None:
+        self.app.push_screen(GenreScreen(self.execute_genre_browser_search))
+
+    async def execute_genre_browser_search(self, genre_id: int, genre_name: str) -> None:
+        """Callback executed when a genre is selected from the GenreScreen."""
+        results_list = self.query_one("#results_list", ListView)
+        await results_list.clear()
+        
+        results_list.append(ListItem(Label(f"Searching TMDB for genre: {genre_name}...")))
+        self.fetch_genre_results_background(genre_id)
         
 
 class MovieScreen(Screen):
