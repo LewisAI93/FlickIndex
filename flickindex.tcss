@@ -69,9 +69,33 @@
     height: auto;
 }
 
+#genre_sidebar {
+    width: 30;
+    height: 100%;
+    border-right: solid $primary; 
+    padding: 1;
+}
+
+#genre_results_pane {
+    width: 1fr;
+    height: 100%;
+    padding: 1;
+}
+
+#genre_list, #genre_results_list {
+    height: 1fr;
+    border: solid $primary;
+}
+
+#genre_results_header {
+    margin-bottom: 1;
+    color: $accent;
+    text-style: bold;
+}
+
 #search_button_row {
     height: auto;
-    margin-bottom: 1;
+    width: 100%;
 }
 
 #search_button_row Button {

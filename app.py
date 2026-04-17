@@ -462,8 +462,9 @@ class HomeScreen(Screen):
             self.app.call_from_thread(self.display_error, str(e))
 
     @on(Button.Pressed, "#browse_genres_button")
-    def open_genre_browser(self) -> None:
-        self.app.push_screen(GenreScreen(self.execute_genre_browser_search))
+    def action_browse_genres(self) -> None:
+        """Opens the new standalone Genre Discovery screen."""
+        self.app.push_screen(GenreScreen())
 
     async def execute_genre_browser_search(self, genre_id: int, genre_name: str) -> None:
         """Callback executed when a genre is selected from the GenreScreen."""
@@ -838,6 +839,91 @@ class CollectionScreen(Screen):
                 self.notify(f"Removed '{title}' from Watchlist.", severity="success")
             else:
                 self.notify("Failed to remove item.", severity="error")
+
+class GenreScreen(Screen):
+    """A dual-pane screen for browsing genres and seeing results instantly."""
+
+    def __init__(self):
+        super().__init__()
+        self.genres = []
+        self.movie_map = {}
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        with Horizontal():
+            # Sidebar for genre selection
+            with Vertical(id="genre_sidebar"):
+                yield Label("Genres", classes="section_heading")
+                yield ListView(id="genre_list")
+                yield Button("Back to Home", id="back_button", variant="default")
+            
+            # Main area for results
+            with Vertical(id="genre_results_pane"):
+                yield Label("Select a genre to browse movies", id="genre_results_header", classes="section_heading")
+                yield ListView(id="genre_results_list")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self.load_genres()
+
+    @work(thread=True)
+    def load_genres(self) -> None:
+        try:
+            from main import genres_list
+            self.genres = genres_list()
+            self.app.call_from_thread(self.display_genres)
+        except Exception as e:
+            self.app.call_from_thread(self.notify, f"Error: {e}", severity="error")
+
+    def display_genres(self) -> None:
+        list_view = self.query_one("#genre_list", ListView)
+        list_view.clear()
+        for g in self.genres:
+            list_view.append(ListItem(Label(g["name"]), id=f"gen_{g['id']}"))
+        list_view.focus()
+
+    @on(ListView.Highlighted, "#genre_list")
+    def update_results_on_highlight(self, event: ListView.Highlighted) -> None:
+        """Fetch movies immediately when the user scrolls through genres."""
+        if event.item and event.item.id:
+            genre_id = int(event.item.id.split("_")[1])
+            genre_name = next((g["name"] for g in self.genres if g["id"] == genre_id), "Movies")
+            self.query_one("#genre_results_header", Label).update(f"Popular {genre_name}")
+            self.fetch_genre_movies(genre_id)
+
+    @work(thread=True)
+    def fetch_genre_movies(self, genre_id: int) -> None:
+        try:
+            from main import search_genre
+            movies = search_genre(genre_id)
+            self.app.call_from_thread(self.display_movies, movies)
+        except Exception as e:
+            pass # Avoid spamming notifications while scrolling
+
+    def display_movies(self, movies: list) -> None:
+        results_list = self.query_one("#genre_results_list", ListView)
+        results_list.clear()
+        self.movie_map.clear()
+
+        for movie in movies[:15]:
+            m_id = str(movie.get("id"))
+            title = movie.get("title", "Unknown")
+            year = (movie.get("release_date") or "")[:4]
+            label = f"{title} ({year})" if year else title
+            
+            list_id = f"gmovie_{m_id}"
+            self.movie_map[list_id] = movie
+            results_list.append(ListItem(Label(label), id=list_id))
+
+    @on(ListView.Selected, "#genre_results_list")
+    def open_movie(self, event: ListView.Selected) -> None:
+        movie = self.movie_map.get(event.item.id)
+        if movie:
+            self.app.push_screen(MovieScreen(movie))
+
+    @on(Button.Pressed, "#back_button")
+    def go_back(self) -> None:
+        self.app.pop_screen()
 
 class FlickIndex(App):
     CSS_PATH = "flickindex.tcss"
