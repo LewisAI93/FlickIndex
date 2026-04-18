@@ -37,6 +37,7 @@ def search_movies(query: str, *, language: str = "en-US", page: int = 1) -> List
         "query": query,
         "language": language,
         "page": page,
+        "include_adult": False,
     }
 
     # Send a GET resquest to the TMDB API with the search parameters
@@ -54,6 +55,8 @@ def search_movies(query: str, *, language: str = "en-US", page: int = 1) -> List
     # Extract relevant results using .get() so that missing fields don't crash the program
     simplified = []
     for item in results:
+        if item.get("adult"):
+            continue
         vote = item.get("vote_average")
         if not vote or vote <= 1 or vote >= 9.9:
             continue
@@ -99,6 +102,7 @@ def search_actor(query: str, *, language: str = "en-US", page: int = 1) -> List[
         "query": query,
         "language": language,
         "page": page,
+        "include_adult": False,
     }
 
     response = requests.get(url, params=params, timeout=10)
@@ -163,6 +167,8 @@ def similar_movies(movie_id: int, *, language: str = "en-US", page: int = 1) -> 
             for item in parts:
                 if item.get("id") == movie_id:
                     continue
+                if item.get("adult"):
+                    continue
                 vote = item.get("vote_average")
                 if not vote or vote <= 1 or vote >= 9.9:
                     continue
@@ -183,6 +189,7 @@ def similar_movies(movie_id: int, *, language: str = "en-US", page: int = 1) -> 
             "api_key": TMDB_API_KEY,
             "language": language,
             "page": page,
+            "include_adult": False,
         }
         rec_resp = requests.get(rec_url, params=rec_params, timeout=10)
         rec_resp.raise_for_status()
@@ -193,6 +200,8 @@ def similar_movies(movie_id: int, *, language: str = "en-US", page: int = 1) -> 
         for item in rec_results:
             mid = item.get("id")
             if not mid or mid in existing_ids or mid == movie_id:
+                continue
+            if item.get("adult"):
                 continue
             vote = item.get("vote_average")
             if not vote or vote <= 1 or vote >= 9.9:
@@ -233,6 +242,7 @@ def search_genre(genre_id: int, *, language: str = "en-US", page: int = 1) -> Li
         "page": page,
         "with_genres": genre_id,
         "sort_by": "popularity.desc",
+        "include_adult": False,
     }
 
     response = requests.get(url, params=params, timeout=10)
@@ -242,6 +252,8 @@ def search_genre(genre_id: int, *, language: str = "en-US", page: int = 1) -> Li
 
     simplified = []
     for item in results:
+        if item.get("adult"):
+            continue
         vote = item.get("vote_average")
         if not vote or vote <= 1 or vote >= 9.9:
             continue
@@ -265,6 +277,7 @@ def popular_movies(*, language: str = "en-US", page: int = 1) -> List[Dict[str, 
         "api_key": TMDB_API_KEY,
         "language": language,
         "page": page,
+        "include_adult": False,
     }
 
     response = requests.get(url, params=params, timeout=10)
@@ -274,6 +287,8 @@ def popular_movies(*, language: str = "en-US", page: int = 1) -> List[Dict[str, 
 
     simplified = []
     for item in results:
+        if item.get("adult"):
+            continue
         vote = item.get("vote_average")
         if not vote or vote <= 1 or vote >= 9.9:
             continue
