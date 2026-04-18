@@ -220,3 +220,35 @@ Input:focus {
     width: 1fr;      /* Buttons share horizontal space equally */
     margin: 0 1 0 0; /* Tiny gap to the right of each button */
 }
+
+
+/* --- HEADER & FOOTER OVERRIDES --- */
+Header {
+    background: $surface;
+    color: $primary;
+}
+
+HeaderIcon {
+    display: none; /* Hides the default Textual logo icon for a cleaner look */
+}
+
+HeaderClock {
+    color: $secondary;
+}
+
+Footer {
+    background: $surface;
+    color: $secondary;
+}
+
+/* Overrides the blue highlight on the footer hotkeys */
+Footer > .footer--highlight {
+    background: $secondary;
+    color: $surface;
+}
+
+Footer > .footer--highlight-key {
+    background: $primary;
+    color: $surface;
+    text-style: bold;
+}
