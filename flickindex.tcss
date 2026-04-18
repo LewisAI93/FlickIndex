@@ -1,64 +1,222 @@
-#left_pane {
-    width: 2fr;
-    padding: 2;
-}
+/* --- AMBER PHOSPHOR PALETTE --- */
+$primary: #FFB300;     /* Bright Amber */
+$accent: #221A0C;      /* Very dark background */
+$surface: #121212;     /* Deep Grey app background */
+$secondary: #855E00;   /* Muted, Burnt Amber */
+$text: #FFD580;        
+$muted_grey: #333333;  /* Subtle grey for non-distracting borders */
 
-#right_pane {
-    width: 1fr;
-    padding: 2;
-    border-left: solid $secondary;
-}
-
-#collection_header {
-    width: 100%;
-    content-align: center middle;
-    text-style: bold;
-    background: $primary;
+/* --- GLOBAL STYLES --- */
+Screen {
+    background: $surface;
     color: $text;
-    margin-bottom: 2;
-    padding: 1;
-    border: tall $secondary;
+}
+
+#screen_frame {
+    border: round $secondary;
+    padding: 0 2; 
+    margin: 1 4; 
+    background: $surface;
+    height: 1fr;
+}
+
+#screen_frame > Horizontal {
+    align: center middle;
+    height: 1fr;
+}
+
+* {
+    scrollbar-color: $secondary;
+    scrollbar-color-hover: $primary;
+    scrollbar-size: 1 1;
+}
+
+/* --- BUTTONS --- */
+Button {
+    background: $surface;
+    color: $secondary;
+    border: round $secondary;
+    height: 3;
+    content-align: center middle;
+    margin: 0;
+}
+
+Button:hover, Button:focus {
+    background: $surface;
+    color: $primary;      
+    border: round $primary; 
+    text-style: bold;
+}
+
+#search_button_row {
+    height: auto; /* Changed from 3 to auto to prevent container stretching */
+    width: 100%;
+    margin: 0; 
+}
+
+#search_button_row Button {
+    width: 50%;
+}
+
+/* --- RIGHT PANE ALIGNMENT --- */
+#right_pane ListView {
+    margin-bottom: 0; 
+}
+
+#right_pane Button {
+    margin-top: 0;    
+    margin-bottom: 2; 
+    width: 100%; 
+}
+
+/* --- QUIT BUTTON --- */
+#quit_button {
+    border: round #662222; 
+    color: #883333;
+    width: 100%;
+    dock: bottom; 
+    margin-bottom: 1;
+}
+
+#quit_button:hover, #quit_button:focus {
+    border: round #FF4400; 
+    color: #FF4400;
+}
+
+/* --- LISTS --- */
+ListView, Vertical#trending_container {
+    border: round $secondary;
+    margin-top: 0; /* Ensures it sits completely flush against the button row */
+    margin-bottom: 1;
+    padding: 0 1; 
+    width: 100%;
+    height: auto;
+    max-height: 18;
+    min-height: 4; 
+    background: $surface;
+}
+
+ListView > ListItem.--highlight,
+ListView:focus > ListItem.--highlight,
+ListItem:focus {
+    background: $secondary; 
+    color: $primary;
+    text-style: bold;
+    margin: 0; 
+}
+
+/* --- HEADERS --- */
+.section_heading, #collection_header {
+    background: $secondary; 
+    color: $primary;      
+    text-style: bold;
+    width: 100%;
+    padding: 0 1;
+    margin-bottom: 0;
+    border: none;
+}
+
+.side_heading {
+    background: transparent;
+    color: $primary;
+    text-style: bold;
+    width: 100%;
+    padding: 0 1;
+    margin-bottom: 0; /* Changed from 1 to 0 to eliminate the gap */
+    border-bottom: solid $muted_grey; 
+}
+
+#main_title {
+    color: $primary;
+    text-align: center;
+    text-style: bold;
+    width: 100%;
+    height: auto;
+    margin-top: 1;
+    margin-bottom: 1;
+}
+
+#system_status {
+    width: 100%;
+    text-align: right;
+    color: $secondary; 
+    text-style: italic;
+    margin-bottom: 1; 
+    margin-top: 1;
 }
 
 #ascii_header {
-    text-align: center;
     width: 100%;
     height: auto;
     color: $primary;
+    text-align: center;
     margin-bottom: 1;
 }
 
-#collection_actions {
-    height: auto;
-    margin-top: 1;
-    align: center middle;
-}
-
-#collection_actions Button {
-    margin: 0 1;
-}
-
-.section_heading {
-    text-style: bold;
-    color: $accent;
-    margin-top: 1;
-    margin-bottom: 1;
-    border-bottom: solid $secondary;
+/* --- INPUTS --- */
+Input {
+    border: round $secondary;
+    background: $surface;
+    color: $primary;
+    margin-bottom: 0; 
+    padding: 0 1; 
     width: 100%;
 }
 
-#movie_details {
-    width: 1fr;
-    padding: 1 2;
+Input:focus {
+    border: round $primary;
 }
 
-#similar_pane {
-    width: 1fr;
+/* --- LAYOUT PANES --- */
+#left_pane, #center_pane, #right_pane {
+    padding: 0 2;
+    height: 100%; 
+    border: none;
+}
+
+#left_pane { width: 30%; }
+#center_pane { width: 40%; }
+#right_pane { width: 30%; }
+
+/* --- MOVIE/GENRE SCREENS --- */
+#movie_details { width: 1fr; padding: 1 2; }
+#movie_overview { width: 100%; height: auto; color: $text; }
+#similar_pane { width: 1fr; padding: 1 2; border: none; }
+#genre_sidebar { width: 30; height: 100%; border-right: solid $secondary; padding: 1; }
+#genre_results_pane { width: 1fr; height: 100%; padding: 1; }
+
+
+/* --- MOVIE SCREEN UPGRADES --- */
+
+#movie_title_header {
+    background: $secondary;
+    color: $primary;
+    text-style: bold;
+    width: 100%;
     padding: 1 2;
-    border-left: solid $secondary;
+    margin-bottom: 1;
+}
+
+#movie_meta {
+    color: $primary;
+    margin-bottom: 2; /* Pushes the synopsis down */
 }
 
 #movie_overview {
     width: 100%;
+    height: auto; 
+    color: $text;
+    margin-top: 1; 
+    margin-bottom: 3; /* Huge breathing space before the buttons */
+}
+
+/* Horizontal button layout */
+#movie_action_buttons {
     height: auto;
+    width: 100%;
+}
+
+#movie_action_buttons Button {
+    width: 1fr;      /* Buttons share horizontal space equally */
+    margin: 0 1 0 0; /* Tiny gap to the right of each button */
 }
