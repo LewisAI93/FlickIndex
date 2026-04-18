@@ -421,6 +421,19 @@ class HomeScreen(Screen):
     # POPULAR MOVIES
     @work(thread=True)
     def fetch_popular_movies_background(self) -> None:
+        """
+        Fetches a list of popular movies in the background.
+
+        Runs in a separate thread to prevent the UI from crashing.
+        Calls the popular_movies() function which generates an API request.
+
+        After the request is made, the result is passed back to the 
+        main UI thread using the call_from_thread() function and the movies
+        are finally displayed using display_popular_movies().
+
+        The function catches errors during the fetching and en error 
+        message is sent to the UI using display_popular_error
+        """
         try:
             movies = popular_movies()
             self.app.call_from_thread(self.display_popular_movies, movies)
@@ -428,6 +441,19 @@ class HomeScreen(Screen):
             self.app.call_from_thread(self.display_popular_error, str(e))
 
     async def display_popular_movies(self, movies: list) -> None:
+        """"
+        Finds the movie list UI interface and clears old results.
+        If there are no movies, a message will be shown. Function loops
+        through up to 8 movies and formats each movie by title
+        and year. Stores all the movie data in a dictionary and displays
+        each movie as a clickable list item.
+
+        Args:
+        - movies (list): a list of movie data
+
+        Returns_
+        - None: nothing
+        """
         popular_list = self.query_one("#popular_list", ListView)
         await popular_list.clear()
         self.popular_movie_map.clear()
@@ -448,12 +474,22 @@ class HomeScreen(Screen):
             popular_list.append(ListItem(Label(label_text), id=list_id))
 
     async def display_popular_error(self, error_msg: str) -> None:
+        """"
+        Displays an error message in the popular movies list.
+
+        Clears the current list and shows an error message if
+        fetching a popular movie fails
+        """
         popular_list = self.query_one("#popular_list", ListView)
         await popular_list.clear()
         popular_list.append(ListItem(Label(f"API Error: {error_msg}")))
 
     @on(ListView.Selected, "#popular_list")
     def open_popular_movie(self, event: ListView.Selected) -> None:
+        """
+        Function runs when user clicks a movie in the list. Finds the movie
+        using its ID and opens a new screen with that movie's information
+        """
         if not event.item.id:
             return
         
@@ -463,6 +499,11 @@ class HomeScreen(Screen):
 
     @work(thread=True)
     def fetch_genres_background(self) -> None:
+        """
+        Function fetches a list of movie genres in the background,
+        then sends the data to another function to build a genre 
+        map. If something goes wrong, it silently ignores the error
+        """
         try:
             genres = genres_list()
             self.app.call_from_thread(self.build_genre_map, genres)
@@ -470,6 +511,11 @@ class HomeScreen(Screen):
             pass
     
     def build_genre_map(self, genres: list) -> None:
+        """
+        Takes a list of genres from the API and converts it into
+        a dictionary. Adds shortcut names like 'sci-fi' and 'rom-
+        com'
+        """
         self.genre_map.clear()
         for genre in genres:
             name = genre.get("name", "").lower()
@@ -484,6 +530,11 @@ class HomeScreen(Screen):
 
     @work(thread=True)
     def fetch_genre_results_background(self, genre_id: int) -> None:
+        """
+        Searches for movies in a specific genre. Function runs in the 
+        background. Sends the results of the search to the UI to display.
+        If something goes wrong, shows an error message
+        """
         try:
             movies = search_genre(genre_id)
             self.app.call_from_thread(self.display_results, movies)
@@ -885,11 +936,20 @@ class GenreScreen(Screen):
     """A dual-pane screen for browsing genres and seeing results instantly."""
 
     def __init__(self):
+        """
+        Runs when the class is created and call the parent class
+        setup. Creates an empty list for genres and an empty dictionary
+        for movie data.
+        """
         super().__init__()
         self.genres = []
         self.movie_map = {}
 
     def compose(self) -> ComposeResult:
+        """
+        Builds the layout of the screen. Creates a sidebar for genres and a main
+        area for results. Uses a structured layout (header, body, footer)
+        """
         yield Header()
         with Vertical(id="screen_frame"):
             with Horizontal():
@@ -906,10 +966,17 @@ class GenreScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
+        """
+        Runs automatically when the screen is loaded. Starts loading genres
+        """
         self.load_genres()
 
     @work(thread=True)
     def load_genres(self) -> None:
+        """
+        Loads genre data in the background and stores the genre in our class.
+        The UI displays them. If something fails, show an error message.
+        """
         try:
             from main import genres_list
             self.genres = genres_list()
@@ -918,6 +985,10 @@ class GenreScreen(Screen):
             self.app.call_from_thread(self.notify, f"Error: {e}", severity="error")
 
     def display_genres(self) -> None:
+        """
+        Takes the genres loaded from earlier and displays them in a genre list
+        sidebar. It makes the list ready for user interaction.
+        """
         list_view = self.query_one("#genre_list", ListView)
         list_view.clear()
         for g in self.genres:
@@ -935,6 +1006,11 @@ class GenreScreen(Screen):
 
     @work(thread=True)
     def fetch_genre_movies(self, genre_id: int) -> None:
+        """
+        Fetches movies for a selected genre in the background. Sends the
+        results to the UI to display. Silently ignores errors to avoid 
+        annoying the user.
+        """
         try:
             from main import search_genre
             movies = search_genre(genre_id)
@@ -943,6 +1019,11 @@ class GenreScreen(Screen):
             pass # Avoid spamming notifications while scrolling
 
     def display_movies(self, movies: list) -> None:
+        """
+        Function takes a list of movies and displays up to 15 of them in
+        a results panel. Each movie is stored in a dictionary so it can be
+        accessed later
+        """
         results_list = self.query_one("#genre_results_list", ListView)
         results_list.clear()
         self.movie_map.clear()
@@ -959,12 +1040,21 @@ class GenreScreen(Screen):
 
     @on(ListView.Selected, "#genre_results_list")
     def open_movie(self, event: ListView.Selected) -> None:
+        """
+        When a user selects a movie from the results list, it finds
+        that movie's data and opens a new screen showing the movie
+        details
+        """
         movie = self.movie_map.get(event.item.id)
         if movie:
             self.app.push_screen(MovieScreen(movie))
 
     @on(Button.Pressed, "#back_button")
     def go_back(self) -> None:
+        """
+        When the user clicks the back button it returns to the previous
+        screen
+        """
         self.app.pop_screen()
 
 class FlickIndex(App):
@@ -978,10 +1068,17 @@ class FlickIndex(App):
     ]
 
     def action_go_back(self) -> None:
+        """
+        Goes back to the previous screen only if not already
+        on the home screen
+        """
         if not isinstance(self.screen, HomeScreen):
             self.pop_screen()
 
     def on_mount(self) -> None:
+        """
+        Automatically opens the home screen when app starts
+        """
         self.push_screen(HomeScreen())
 
 if __name__ == "__main__":
