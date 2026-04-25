@@ -1,10 +1,20 @@
-/* --- AMBER PHOSPHOR PALETTE --- */
-$primary: #FFB300;     /* Bright Amber */
-$accent: #221A0C;      /* Very dark background */
-$surface: #121212;     /* Deep Grey app background */
-$secondary: #855E00;   /* Muted, Burnt Amber */
-$text: #FFD580;        
-$muted_grey: #333333;  /* Subtle grey for non-distracting borders */
+# /* --- AMBER PHOSPHOR PALETTE --- */
+# $primary: #FFB300;     /* Bright Amber */
+# $accent: #221A0C;      /* Very dark background */
+# $surface: #121212;     /* Deep Grey app background */
+# $secondary: #855E00;   /* Muted, Burnt Amber */
+# $text: #FFD580;        
+# $muted_grey: #333333;  /* Subtle grey for non-distracting borders */
+
+# /* Deep orange */ 
+
+$primary: #FF8F00;
+$secondary: #E65100;
+$accent: #221A0C;
+$surface: #121212;
+$text: #FFF3E0;
+$muted_grey: #333333;
+
 
 /* --- GLOBAL STYLES --- */
 Screen {
@@ -105,6 +115,17 @@ ListItem:focus {
     margin: 0; 
 }
 
+/* Fix unreadable titles in lists (Like Similar Movies, Favourites, etc.) */
+ListItem > Label {
+    color: #FFECB3;  /* A very light, bright cream/yellow for maximum contrast */
+}
+
+/* Optional: Make the title slightly bolder when highlighted */
+ListItem.-highlighted > Label {
+    text-style: bold;
+    color: $surface; /* Textual switches the background here, so text should be dark */
+}
+
 /* --- HEADERS --- */
 .section_heading, #collection_header {
     background: $secondary; 
@@ -145,12 +166,20 @@ ListItem:focus {
     margin-top: 1;
 }
 
-#ascii_header {
+# #ascii_header, #movie_title_header, #search_header, #trending_header {
+#     background: $primary;
+#     color: $surface;
+#     text-style: bold;
+#     width: 100%;
+#     content-align: center middle;
+# }
+
+#search_header, #trending_header {
+    background: $primary;
+    color: #5C2300;
+    text-style: bold;
     width: 100%;
-    height: auto;
-    color: $primary;
-    text-align: center;
-    margin-bottom: 1;
+    content-align: center middle;
 }
 
 /* --- INPUTS --- */
@@ -199,7 +228,7 @@ Input:focus {
 
 #movie_meta {
     color: $primary;
-    margin-bottom: 2; /* Pushes the synopsis down */
+    margin-bottom: 2;
 }
 
 #movie_overview {
@@ -207,7 +236,7 @@ Input:focus {
     height: auto; 
     color: $text;
     margin-top: 1; 
-    margin-bottom: 3; /* Huge breathing space before the buttons */
+    margin-bottom: 3;
 }
 
 /* Horizontal button layout */
@@ -217,8 +246,8 @@ Input:focus {
 }
 
 #movie_action_buttons Button {
-    width: 1fr;      /* Buttons share horizontal space equally */
-    margin: 0 1 0 0; /* Tiny gap to the right of each button */
+    width: 1fr;
+    margin: 0 1 0 0;
 }
 
 

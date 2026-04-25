@@ -112,7 +112,7 @@ class HomeScreen(Screen):
                 
                 # 3. Center column
                 with Vertical(id="center_pane"):
-                    yield Label("Search Database", classes="section_heading")
+                    yield Label("Search Database", id="search_header")
                     yield Input(placeholder="Movie, Actor, or 'genre: action'...", id="search_input")
 
                     with Horizontal(id="search_button_row"):
@@ -121,7 +121,7 @@ class HomeScreen(Screen):
                     
                     yield ListView(id="results_list")
 
-                    yield Label("Trending Now", classes="section_heading")
+                    yield Label("Trending Now", id="trending_header")
                     yield ListView(id="popular_list")
 
                 # 4. Right column
