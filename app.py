@@ -12,7 +12,9 @@ from storage_module import (
     add_to_watchlist,
     add_to_recently_viewed,
     remove_from_favourites,
-    remove_from_watchlist
+    remove_from_watchlist,
+    is_favourite,
+    is_in_watchlist
 )
 
 # ===============
@@ -561,8 +563,22 @@ class MovieScreen(Screen):
 
     def on_mount(self) -> None:
         """
-        Get similar movies based on information of the selected movie
+        Sets the initial state of the buttons based on storage, 
+        then gets similar movies based on information of the selected movie.
         """
+        movie_id = self.movie_data.get("id")
+        
+        # Target the buttons
+        fav_button = self.query_one("#fav_button", Button)
+        watch_button = self.query_one("#watch_list_button", Button)
+
+        # Update labels if already saved
+        if is_favourite(movie_id):
+            fav_button.label = "Remove from Favourites"
+            
+        if is_in_watchlist(movie_id):
+            watch_button.label = "Remove from Watchlist"
+
         self.fetch_similar_movies_background()
 
     @work(thread=True)
@@ -594,7 +610,7 @@ class MovieScreen(Screen):
         release date. If movie title is uknown, then show 'Unknown'.
         """
         list_view = self.query_one("#similar_list", ListView)
-        await list_view.clear() # Added await
+        await list_view.clear()
 
         if not movies:
             list_view.append(ListItem(Label("No similar movies found.")))
@@ -617,7 +633,7 @@ class MovieScreen(Screen):
         - error_msg(str): error message in string format
         """
         list_view = self.query_one("#similar_list", ListView)
-        await list_view.clear() # Added await
+        await list_view.clear()
         list_view.append(ListItem(Label(f"Error loading similar movies: {error_msg}")))
 
     @on(ListView.Selected, "#similar_list")
@@ -646,28 +662,46 @@ class MovieScreen(Screen):
         self.app.pop_screen()
 
     @on(Button.Pressed, "#fav_button")
-    def save_favourite(self) -> None:
+    def toggle_favourite(self, event: Button.Pressed) -> None:
         """
-        When '#fav_button' is pressed, add movie to favourites and 
-        display message. Checks for duplicates.
+        When '#fav_button' is pressed, toggle the movie in favourites,
+        update the button label, and display a message.
         """
-        success = add_to_favourites(self.movie_data)
-        if success:
-            self.notify("Added to Favourites!", severity="success")
+        movie_id = self.movie_data.get("id")
+        button = event.button
+
+        if str(button.label) == "Add to Favourites":
+            success = add_to_favourites(self.movie_data)
+            if success:
+                button.label = "Remove from Favourites"
+                self.notify("Added to Favourites!", severity="success")
         else:
-            self.notify("Already in Favourites.", severity="warning")
+            success = remove_from_favourites(movie_id)
+            if success:
+                button.label = "Add to Favourites"
+                self.notify("Removed from Favourites.", severity="success")
 
     @on(Button.Pressed, "#watch_list_button")
-    def save_watchlist(self) -> None:
+    def toggle_watchlist(self, event: Button.Pressed) -> None:
         """
-        When '#watch_list_button' is pressed, add movie to
-        watchlist and display message. Checks for duplicates.
+        When '#watch_list_button' is pressed, toggle the movie in the
+        watchlist, update the button label, and display a message.
         """
-        success = add_to_watchlist(self.movie_data)
-        if success:
-            self.notify("Added to Watchlist!", severity="success")
+        movie_id = self.movie_data.get("id")
+        button = event.button
+
+        if str(button.label) == "Add to Watchlist":
+            success = add_to_watchlist(self.movie_data)
+            if success:
+                button.label = "Remove from Watchlist"
+                self.notify("Added to Watchlist!", severity="success")
         else:
-            self.notify("Already in Watchlist.", severity="warning")
+            success = remove_from_watchlist(movie_id)
+            if success:
+                button.label = "Add to Watchlist"
+                self.notify("Removed from Watchlist.", severity="success")
+
+           
 
 class ActorScreen(Screen):
     def __init__(self, actor_data: dict):
