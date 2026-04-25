@@ -815,14 +815,46 @@ class CollectionScreen(Screen):
         list_view.focus()
 
     @on(ListView.Selected, "#collection_list")
-    def open_movie_detail(self, event: ListView.Selected) -> None:
+    def handle_selection(self, event: ListView.Selected) -> None:
         """
-        When a movie from '#collection_list' is selected, the id of the movie
-        is retrieved and it opens the details of the movie on the screen
+        When a movie from '#collection_list' is selected (single click or 
+        keyboard navigation), the item is highlighted but no action is taken. 
+        This allows the user to target a movie for removal without immediately 
+        opening its details.
         """
-        movie = self.movie_map.get(event.item.id)
-        if movie:
-            self.app.push_screen(MovieScreen(movie))
+        pass
+
+    @on(events.Click)
+    def on_click(self, event: events.Click) -> None:
+        """
+        Handles mouse clicks. If a double-click is detected on a highlighted 
+        list item, the id of the movie is retrieved and it opens the details 
+        of the movie on the screen.
+
+        Parameters:
+        - event: The click event containing the click chain count
+        """
+        if event.chain == 2:
+            list_view = self.query_one("#collection_list", ListView)
+            if list_view.highlighted_child:
+                movie = self.movie_map.get(list_view.highlighted_child.id)
+                if movie:
+                    self.app.push_screen(MovieScreen(movie))
+
+    @on(events.Key)
+    def handle_enter_key(self, event: events.Key) -> None:
+        """
+        Handles keyboard activation. If 'Enter' is pressed while the list 
+        is focused, it opens the details of the highlighted movie.
+        """
+        if event.key == "enter":
+            list_view = self.query_one("#collection_list", ListView)
+            
+            # Check if the list has focus so Enter doesn't trigger randomly
+            if list_view.has_focus and list_view.highlighted_child:
+                movie = self.movie_map.get(list_view.highlighted_child.id)
+                if movie:
+                    self.app.push_screen(MovieScreen(movie))
 
     @on(Button.Pressed, "#back_to_home")
     def close_screen(self) -> None:
@@ -966,7 +998,8 @@ class FlickIndex(App):
     CSS_PATH = "flickindex.tcss"
     BINDINGS = [
         ("q", "quit", "Quit Application"),
-        ("escape", "go_back", "Go Back")
+        ("escape", "go_back", "Go Back"),
+        ("backspace", "go_back", "Go Back")
     ]
 
     def action_go_back(self) -> None:
