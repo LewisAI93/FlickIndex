@@ -1,13 +1,16 @@
+/* =========================================
+   COLOUR THEMES
+   ========================================= */
+
 # /* --- AMBER PHOSPHOR PALETTE --- */
-# $primary: #FFB300;     /* Bright Amber */
-# $accent: #221A0C;      /* Very dark background */
-# $surface: #121212;     /* Deep Grey app background */
-# $secondary: #855E00;   /* Muted, Burnt Amber */
-# $text: #FFD580;        
-# $muted_grey: #333333;  /* Subtle grey for non-distracting borders */
+# $primary: #FFB300;
+# $accent: #221A0C;
+# $surface: #121212;
+# $secondary: #855E00;
+# $text: #FFD580;
+# $muted_grey: #333333;
 
 # /* Deep orange */ 
-
 $primary: #FF8F00;
 $secondary: #E65100;
 $accent: #221A0C;
@@ -16,10 +19,18 @@ $text: #FFF3E0;
 $muted_grey: #333333;
 
 
-/* --- GLOBAL STYLES --- */
+/* =========================================
+   GLOBAL STYLES
+   ========================================= */
 Screen {
     background: $surface;
     color: $text;
+}
+
+* {
+    scrollbar-color: $secondary;
+    scrollbar-color-hover: $primary;
+    scrollbar-size: 1 1;
 }
 
 #screen_frame {
@@ -35,13 +46,109 @@ Screen {
     height: 1fr;
 }
 
-* {
-    scrollbar-color: $secondary;
-    scrollbar-color-hover: $primary;
-    scrollbar-size: 1 1;
+#system_status {
+    width: 100%;
+    text-align: right;
+    color: $secondary; 
+    text-style: italic;
+    margin-bottom: 1; 
+    margin-top: 1;
 }
 
-/* --- BUTTONS --- */
+/* =========================================
+   LAYOUT PANES
+   ========================================= */
+#left_pane, #center_pane, #right_pane {
+    padding: 0 2;
+    height: 100%; 
+    border: none;
+}
+
+#left_pane { width: 30%; }
+#center_pane { width: 40%; }
+#right_pane { width: 30%; }
+
+/* =========================================
+   HEADERS
+   ========================================= */
+#main_title {
+    color: $primary;
+    text-align: center;
+    text-style: bold;
+    width: 100%;
+    height: auto;
+    margin-top: 1;
+    margin-bottom: 1;
+}
+
+#ascii_header {
+    width: 100%;
+    content-align: center middle;
+    color: $primary;
+    background: transparent;
+    height: auto;
+    margin: 1 0;
+}
+
+/* Base style for side panels (Favourites, Watchlist, etc.) */
+.side_heading {
+    background: transparent;
+    color: $primary;
+    text-style: bold;
+    width: 100%;
+    padding: 0 1;
+    margin-bottom: 0;
+    border-bottom: solid $muted_grey; 
+}
+
+/* High-Contrast Solid Bars (Home, Genres, Movie Title) */
+#search_header, 
+#trending_header, 
+#genres_header, 
+#genre_results_header,
+#movie_title_header {
+    background: $primary;
+    color: #5C2300;
+    text-style: bold;
+    width: 100%;
+    content-align: center middle;
+}
+
+/* Specific override for Movie Title height/padding */
+#movie_title_header {
+    padding: 1 2;
+    margin-bottom: 1;
+}
+
+.section_heading, #collection_header {
+    background: $secondary; 
+    color: $primary;      
+    text-style: bold;
+    width: 100%;
+    padding: 0 1;
+    margin-bottom: 0;
+    border: none;
+}
+
+/* =========================================
+   INPUTS
+   ========================================= */
+Input {
+    border: round $secondary;
+    background: $surface;
+    color: $primary;
+    margin-bottom: 0; 
+    padding: 0 1; 
+    width: 100%;
+}
+
+Input:focus {
+    border: round $primary;
+}
+
+/* =========================================
+   BUTTONS
+   ========================================= */
 Button {
     background: $surface;
     color: $secondary;
@@ -59,7 +166,7 @@ Button:hover, Button:focus {
 }
 
 #search_button_row {
-    height: auto; /* Changed from 3 to auto to prevent container stretching */
+    height: auto; 
     width: 100%;
     margin: 0; 
 }
@@ -68,18 +175,12 @@ Button:hover, Button:focus {
     width: 50%;
 }
 
-/* --- RIGHT PANE ALIGNMENT --- */
-#right_pane ListView {
-    margin-bottom: 0; 
-}
-
 #right_pane Button {
     margin-top: 0;    
     margin-bottom: 2; 
     width: 100%; 
 }
 
-/* --- QUIT BUTTON --- */
 #quit_button {
     border: round #662222; 
     color: #883333;
@@ -93,10 +194,12 @@ Button:hover, Button:focus {
     color: #FF4400;
 }
 
-/* --- LISTS --- */
+/* =========================================
+   LISTS
+   ========================================= */
 ListView, Vertical#trending_container {
     border: round $secondary;
-    margin-top: 0; /* Ensures it sits completely flush against the button row */
+    margin-top: 0; 
     margin-bottom: 1;
     padding: 0 1; 
     width: 100%;
@@ -104,6 +207,10 @@ ListView, Vertical#trending_container {
     max-height: 18;
     min-height: 4; 
     background: $surface;
+}
+
+#right_pane ListView {
+    margin-bottom: 0; 
 }
 
 ListView > ListItem.--highlight,
@@ -115,116 +222,23 @@ ListItem:focus {
     margin: 0; 
 }
 
-/* Fix unreadable titles in lists (Like Similar Movies, Favourites, etc.) */
+/* Fix unreadable titles in lists */
 ListItem > Label {
-    color: #FFECB3;  /* A very light, bright cream/yellow for maximum contrast */
+    color: #FFECB3;  
 }
 
-/* Optional: Make the title slightly bolder when highlighted */
 ListItem.-highlighted > Label {
     text-style: bold;
-    color: $surface; /* Textual switches the background here, so text should be dark */
+    color: $surface; 
 }
 
-/* --- HEADERS --- */
-.section_heading, #collection_header {
-    background: $secondary; 
-    color: $primary;      
-    text-style: bold;
-    width: 100%;
-    padding: 0 1;
-    margin-bottom: 0;
-    border: none;
-}
-
-.side_heading {
-    background: transparent;
-    color: $primary;
-    text-style: bold;
-    width: 100%;
-    padding: 0 1;
-    margin-bottom: 0; /* Changed from 1 to 0 to eliminate the gap */
-    border-bottom: solid $muted_grey; 
-}
-
-#main_title {
-    color: $primary;
-    text-align: center;
-    text-style: bold;
-    width: 100%;
-    height: auto;
-    margin-top: 1;
-    margin-bottom: 1;
-}
-
-#system_status {
-    width: 100%;
-    text-align: right;
-    color: $secondary; 
-    text-style: italic;
-    margin-bottom: 1; 
-    margin-top: 1;
-}
-
-# #ascii_header, #movie_title_header, #search_header, #trending_header {
-#     background: $primary;
-#     color: $surface;
-#     text-style: bold;
-#     width: 100%;
-#     content-align: center middle;
-# }
-
-#search_header, #trending_header {
-    background: $primary;
-    color: #5C2300;
-    text-style: bold;
-    width: 100%;
-    content-align: center middle;
-}
-
-/* --- INPUTS --- */
-Input {
-    border: round $secondary;
-    background: $surface;
-    color: $primary;
-    margin-bottom: 0; 
-    padding: 0 1; 
-    width: 100%;
-}
-
-Input:focus {
-    border: round $primary;
-}
-
-/* --- LAYOUT PANES --- */
-#left_pane, #center_pane, #right_pane {
-    padding: 0 2;
-    height: 100%; 
-    border: none;
-}
-
-#left_pane { width: 30%; }
-#center_pane { width: 40%; }
-#right_pane { width: 30%; }
-
-/* --- MOVIE/GENRE SCREENS --- */
+/* =========================================
+   SPECIFIC SCREENS (MOVIE / GENRE)
+   ========================================= */
 #movie_details { width: 1fr; padding: 1 2; }
-#movie_overview { width: 100%; height: auto; color: $text; }
 #similar_pane { width: 1fr; padding: 1 2; border: none; }
 #genre_sidebar { width: 30; height: 100%; border-right: solid $secondary; padding: 1; }
 #genre_results_pane { width: 1fr; height: 100%; padding: 1; }
-
-
-/* --- MOVIE SCREEN UPGRADES --- */
-
-#movie_title_header {
-    background: $secondary;
-    color: $primary;
-    text-style: bold;
-    width: 100%;
-    padding: 1 2;
-    margin-bottom: 1;
-}
 
 #movie_meta {
     color: $primary;
@@ -239,7 +253,6 @@ Input:focus {
     margin-bottom: 3;
 }
 
-/* Horizontal button layout */
 #movie_action_buttons {
     height: auto;
     width: 100%;
@@ -250,15 +263,16 @@ Input:focus {
     margin: 0 1 0 0;
 }
 
-
-/* --- HEADER & FOOTER OVERRIDES --- */
+/* =========================================
+   HEADER & FOOTER OVERRIDES
+   ========================================= */
 Header {
     background: $surface;
     color: $primary;
 }
 
 HeaderIcon {
-    display: none; /* Hides the default Textual logo icon for a cleaner look */
+    display: none; 
 }
 
 HeaderClock {
@@ -270,7 +284,6 @@ Footer {
     color: $secondary;
 }
 
-/* Overrides the blue highlight on the footer hotkeys */
 Footer > .footer--highlight {
     background: $secondary;
     color: $surface;

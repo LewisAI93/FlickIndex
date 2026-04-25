@@ -956,13 +956,13 @@ class GenreScreen(Screen):
             with Horizontal():
                 # Sidebar for genre selection
                 with Vertical(id="genre_sidebar"):
-                    yield Label("Genres", classes="section_heading")
+                    yield Label("Genres", id="genres_header")
                     yield ListView(id="genre_list")
                     yield Button("Back to Home", id="back_button", variant="default")
                 
                 # Main area for results
                 with Vertical(id="genre_results_pane"):
-                    yield Label("Select a genre to browse movies", id="genre_results_header", classes="section_heading")
+                    yield Label("Select a genre to browse movies", id="genre_results_header")
                     yield ListView(id="genre_results_list")
         yield Footer()
 
