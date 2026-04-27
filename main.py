@@ -8,7 +8,7 @@ from textual.widgets import Header, Footer, Input, Label, Button, ListView, List
 from textual.screen import Screen
 from textual import on, work, events
 
-from main import search_movies, search_actor, similar_movies, popular_movies, genres_list, search_genre
+from tmdb_client import search_movies, search_actor, similar_movies, popular_movies, genres_list, search_genre
 from storage_module import (
     init_storage,
     load_data,
