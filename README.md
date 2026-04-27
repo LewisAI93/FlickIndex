@@ -3,15 +3,20 @@
 FlickIndex is a simple movie discovery application that allows you to search for movie recommendations to watch. The app has a user friendly database that is powered by the TMDB API. This helps you find what to watch faster, instead of what feels like endless scrolling through cluttered streaming menus with results you have no interest in.
 
 ## ✨ Features
-- 🔍 Search for movies by title, actor and genre
-- 🗂️ Clean and driven by the TMDB API
-- ⚡ Fast access to movie details
-- 👀 User-friendly Textual interface
+- 🔍 Search for movies by title, actor, or genre
+- 🗂️ Browse movies by genre with instant results
+- ⚡ Fast access to movie details and similar titles
+- 👀 User-friendly terminal interface built with Textual
 - ⭐ Favourites list
-- 🍿 Watch list
+- 🍿 Watchlist
 - 🕒 Recently viewed list
 - 🔥 Popular movies list
 
+## 📁 Project Structure
+- `main.py` — Textual app
+- `tmdb_client.py` — TMDB API functions
+- `storage_module.py` — Local data persistence
+- `flickindex.tcss` — App styling
 
 ## Setup & Run
 
@@ -28,7 +33,7 @@ FlickIndex is a simple movie discovery application that allows you to search for
 
     ```bash
     python -m venv venv
-    source venv/bin/activate
+    source .venv/bin/activate
     ```
 
 4. Install dependencies:
@@ -40,19 +45,16 @@ FlickIndex is a simple movie discovery application that allows you to search for
 5. Start the application:
 
     ```bash
-    python3 app.py
+    python3 main.py
     ```
 
 ## Basic Controls
 
-- Mouse compatible.
-
-- Navigate: Use the mouse, or press `Tab` / `Shift+Tab` to move focus and `Enter` to select.
-
-- Go Back: Press `Escape` at any time to return to the previous screen.
-
-- Standard Search: Type a movie or actor name and press `Enter`.
-
-- Genre Search: Type `genre:` followed by the genre name (e.g., genre: sci-fi).
-
-- Manage Collections: In your Favourites or Watchlist, select an item and press `d` to delete it.
+- **Mouse compatible** — most actions can be performed with clicks.
+- **Navigate** — use the mouse, or press `Tab` / `Shift+Tab` to move focus and `Enter` to select.
+- **Go Back** — press `Escape` at any time to return to the previous screen.
+- **Standard Search** — type a movie or actor name and press `Enter`.
+- **Genre Search** — type `genre:` followed by a genre name (e.g. `genre: sci-fi`).
+- **Browse Genres** — use the Browse Genres button to visually explore movies by category.
+- **Open from Collections** — double-click a title in your Favourites or Watchlist to view its details.
+- **Delete from Collections** — single-click to select an item, then press `d` or click Remove Selected.
