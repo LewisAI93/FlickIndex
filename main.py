@@ -1,7 +1,3 @@
-import os
-from typing import List, Dict, Any
-import requests
-from dotenv import load_dotenv
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Input, Label, Button, ListView, ListItem
@@ -54,32 +50,10 @@ ASCII_TITLE = r'''
 '''
 
 
-# ASCII_TITLE = r"""
-# ░        ░░  ░░░░░░░░        ░░░      ░░░  ░░░░  ░░        ░░   ░░░  ░░       ░░░        ░░  ░░░░  ░
-# ▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒  ▒▒▒▒▒▒  ▒▒▒▒▒    ▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒▒  ▒▒  ▒▒
-# ▓      ▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓▓▓▓▓     ▓▓▓▓▓▓▓▓  ▓▓▓▓▓  ▓  ▓  ▓▓  ▓▓▓▓  ▓▓      ▓▓▓▓▓▓    ▓▓▓
-# █  ████████  ███████████  █████  ████  ██  ███  ██████  █████  ██    ██  ████  ██  █████████  ██  ██
-# █  ████████        ██        ███      ███  ████  ██        ██  ███   ██       ███        ██  ████  █
-                                                                                                      
-# """
-
-
 # =====================
 # TEXTUAL APP INTERFACE
 # =====================
 
-@on(ListView.Selected, "#known_for_list")
-def open_known_for(self, event: ListView.Selected) -> None:
-    if not event.item.id:
-        return
-    movie = self.known_for_map.get(event.item.id)
-    if not movie:
-        return
-    self.app.push_screen(MovieScreen(movie))
-
-def on_key(self, event: events.Key) -> None:
-    if event.key == "space" and isinstance(self.focused, Button):
-        self.focused.press()
 
 class HomeScreen(Screen):
 
@@ -226,8 +200,6 @@ class HomeScreen(Screen):
             self.app.call_from_thread(self.display_results, combined_results)
         except Exception as e:
             self.app.call_from_thread(self.display_error, str(e))
-
-    current_results = {}
 
     async def display_results(self, results: list) -> None:
         """
@@ -530,7 +502,6 @@ class MovieScreen(Screen):
         """
         super().__init__()
         self.movie_data = movie_data
-        add_to_recently_viewed(self.movie_data)
         self.similar_movies = []
 
     def compose(self) -> ComposeResult:
@@ -583,6 +554,7 @@ class MovieScreen(Screen):
         Sets the initial state of the buttons based on storage, 
         then gets similar movies based on information of the selected movie.
         """
+        add_to_recently_viewed(self.movie_data)
         movie_id = self.movie_data.get("id")
         
         # Target the buttons
@@ -740,15 +712,18 @@ class ActorScreen(Screen):
         - popularity: popularity score of the actor
         """
         yield Header()
-        with Vertical(id="actor_details"):
-            yield Label(f"Name: {self.actor_data.get('name')}")
-            yield Label(f"Department: {self.actor_data.get('known_for_department')}")
-            yield Label(f"Popularity: {self.actor_data.get('popularity')}")
-            yield Label(" ")
-            yield Label("Known For:")
-            yield ListView(id="known_for_list")
-            yield Label(" ")
-            yield Button("Back to Search", id="back_button", variant="default")
+        with Vertical(id="screen_frame"):
+            with Horizontal():
+                with Vertical(id="movie_details"):
+                    name = self.actor_data.get('name', 'Unknown')
+                    dept = self.actor_data.get('known_for_department', 'Unknown')
+                    yield Label(f" {name} ", id="movie_title_header")
+                    yield Label(f"Department: {dept}  |  Popularity: {self.actor_data.get('popularity', 'N/A')}", id="movie_meta")
+                    with Horizontal(id="movie_action_buttons"):
+                        yield Button("Back", id="back_button", variant="default")
+                with Vertical(id="similar_pane"):
+                    yield Label("Known For", classes="side_heading")
+                    yield ListView(id="known_for_list")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -829,6 +804,7 @@ class CollectionScreen(Screen):
         that contain header and buttons ('Back to Home' and 'Remove Selected') 
         and a ListView for collected items
         """
+        yield Header()
         with Vertical(id="screen_frame"):
             yield Label(self.display_title, id="ascii_header")
             
@@ -989,7 +965,6 @@ class GenreScreen(Screen):
     @work(thread=True)
     def load_genres(self) -> None:
         try:
-            from main import genres_list
             self.genres = genres_list()
             self.app.call_from_thread(self.display_genres)
         except Exception as e:
@@ -1014,7 +989,6 @@ class GenreScreen(Screen):
     @work(thread=True)
     def fetch_genre_movies(self, genre_id: int) -> None:
         try:
-            from main import search_genre
             movies = search_genre(genre_id)
             self.app.call_from_thread(self.display_movies, movies)
         except Exception as e:
