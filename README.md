@@ -33,7 +33,7 @@ FlickIndex is a simple movie discovery application that allows you to search for
 
     ```bash
     python -m venv venv
-    source .venv/bin/activate
+    source venv/bin/activate
     ```
 
 4. Install dependencies:
