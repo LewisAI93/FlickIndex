@@ -16,7 +16,9 @@ from storage_module import (
     add_to_watchlist,
     add_to_recently_viewed,
     remove_from_favourites,
-    remove_from_watchlist
+    remove_from_watchlist,
+    is_favourite,
+    is_in_watchlist
 )
 
 # ===============
@@ -127,7 +129,7 @@ class HomeScreen(Screen):
                 
                 # 3. Center column
                 with Vertical(id="center_pane"):
-                    yield Label("Search Database", classes="section_heading")
+                    yield Label("Search Database", id="search_header")
                     yield Input(placeholder="Movie, Actor, or 'genre: action'...", id="search_input")
 
                     with Horizontal(id="search_button_row"):
@@ -136,7 +138,7 @@ class HomeScreen(Screen):
                     
                     yield ListView(id="results_list")
 
-                    yield Label("Trending Now", classes="section_heading")
+                    yield Label("Trending Now", id="trending_header")
                     yield ListView(id="popular_list")
 
                 # 4. Right column
@@ -578,8 +580,22 @@ class MovieScreen(Screen):
 
     def on_mount(self) -> None:
         """
-        Get similar movies based on information of the selected movie
+        Sets the initial state of the buttons based on storage, 
+        then gets similar movies based on information of the selected movie.
         """
+        movie_id = self.movie_data.get("id")
+        
+        # Target the buttons
+        fav_button = self.query_one("#fav_button", Button)
+        watch_button = self.query_one("#watch_list_button", Button)
+
+        # Update labels if already saved
+        if is_favourite(movie_id):
+            fav_button.label = "Remove from Favourites"
+            
+        if is_in_watchlist(movie_id):
+            watch_button.label = "Remove from Watchlist"
+
         self.fetch_similar_movies_background()
 
     @work(thread=True)
@@ -611,7 +627,7 @@ class MovieScreen(Screen):
         release date. If movie title is uknown, then show 'Unknown'.
         """
         list_view = self.query_one("#similar_list", ListView)
-        await list_view.clear() # Added await
+        await list_view.clear()
 
         if not movies:
             list_view.append(ListItem(Label("No similar movies found.")))
@@ -634,7 +650,7 @@ class MovieScreen(Screen):
         - error_msg(str): error message in string format
         """
         list_view = self.query_one("#similar_list", ListView)
-        await list_view.clear() # Added await
+        await list_view.clear()
         list_view.append(ListItem(Label(f"Error loading similar movies: {error_msg}")))
 
     @on(ListView.Selected, "#similar_list")
@@ -663,28 +679,46 @@ class MovieScreen(Screen):
         self.app.pop_screen()
 
     @on(Button.Pressed, "#fav_button")
-    def save_favourite(self) -> None:
+    def toggle_favourite(self, event: Button.Pressed) -> None:
         """
-        When '#fav_button' is pressed, add movie to favourites and 
-        display message. Checks for duplicates.
+        When '#fav_button' is pressed, toggle the movie in favourites,
+        update the button label, and display a message.
         """
-        success = add_to_favourites(self.movie_data)
-        if success:
-            self.notify("Added to Favourites!", severity="success")
+        movie_id = self.movie_data.get("id")
+        button = event.button
+
+        if str(button.label) == "Add to Favourites":
+            success = add_to_favourites(self.movie_data)
+            if success:
+                button.label = "Remove from Favourites"
+                self.notify("Added to Favourites!", severity="success")
         else:
-            self.notify("Already in Favourites.", severity="warning")
+            success = remove_from_favourites(movie_id)
+            if success:
+                button.label = "Add to Favourites"
+                self.notify("Removed from Favourites.", severity="success")
 
     @on(Button.Pressed, "#watch_list_button")
-    def save_watchlist(self) -> None:
+    def toggle_watchlist(self, event: Button.Pressed) -> None:
         """
-        When '#watch_list_button' is pressed, add movie to
-        watchlist and display message. Checks for duplicates.
+        When '#watch_list_button' is pressed, toggle the movie in the
+        watchlist, update the button label, and display a message.
         """
-        success = add_to_watchlist(self.movie_data)
-        if success:
-            self.notify("Added to Watchlist!", severity="success")
+        movie_id = self.movie_data.get("id")
+        button = event.button
+
+        if str(button.label) == "Add to Watchlist":
+            success = add_to_watchlist(self.movie_data)
+            if success:
+                button.label = "Remove from Watchlist"
+                self.notify("Added to Watchlist!", severity="success")
         else:
-            self.notify("Already in Watchlist.", severity="warning")
+            success = remove_from_watchlist(movie_id)
+            if success:
+                button.label = "Add to Watchlist"
+                self.notify("Removed from Watchlist.", severity="success")
+
+           
 
 class ActorScreen(Screen):
     def __init__(self, actor_data: dict):
@@ -832,14 +866,46 @@ class CollectionScreen(Screen):
         list_view.focus()
 
     @on(ListView.Selected, "#collection_list")
-    def open_movie_detail(self, event: ListView.Selected) -> None:
+    def handle_selection(self, event: ListView.Selected) -> None:
         """
-        When a movie from '#collection_list' is selected, the id of the movie
-        is retrieved and it opens the details of the movie on the screen
+        When a movie from '#collection_list' is selected (single click or 
+        keyboard navigation), the item is highlighted but no action is taken. 
+        This allows the user to target a movie for removal without immediately 
+        opening its details.
         """
-        movie = self.movie_map.get(event.item.id)
-        if movie:
-            self.app.push_screen(MovieScreen(movie))
+        pass
+
+    @on(events.Click)
+    def on_click(self, event: events.Click) -> None:
+        """
+        Handles mouse clicks. If a double-click is detected on a highlighted 
+        list item, the id of the movie is retrieved and it opens the details 
+        of the movie on the screen.
+
+        Parameters:
+        - event: The click event containing the click chain count
+        """
+        if event.chain == 2:
+            list_view = self.query_one("#collection_list", ListView)
+            if list_view.highlighted_child:
+                movie = self.movie_map.get(list_view.highlighted_child.id)
+                if movie:
+                    self.app.push_screen(MovieScreen(movie))
+
+    @on(events.Key)
+    def handle_enter_key(self, event: events.Key) -> None:
+        """
+        Handles keyboard activation. If 'Enter' is pressed while the list 
+        is focused, it opens the details of the highlighted movie.
+        """
+        if event.key == "enter":
+            list_view = self.query_one("#collection_list", ListView)
+            
+            # Check if the list has focus so Enter doesn't trigger randomly
+            if list_view.has_focus and list_view.highlighted_child:
+                movie = self.movie_map.get(list_view.highlighted_child.id)
+                if movie:
+                    self.app.push_screen(MovieScreen(movie))
 
     @on(Button.Pressed, "#back_to_home")
     def close_screen(self) -> None:
@@ -907,13 +973,13 @@ class GenreScreen(Screen):
             with Horizontal():
                 # Sidebar for genre selection
                 with Vertical(id="genre_sidebar"):
-                    yield Label("Genres", classes="section_heading")
+                    yield Label("Genres", id="genres_header")
                     yield ListView(id="genre_list")
                     yield Button("Back to Home", id="back_button", variant="default")
                 
                 # Main area for results
                 with Vertical(id="genre_results_pane"):
-                    yield Label("Select a genre to browse movies", id="genre_results_header", classes="section_heading")
+                    yield Label("Select a genre to browse movies", id="genre_results_header")
                     yield ListView(id="genre_results_list")
         yield Footer()
 
@@ -983,7 +1049,8 @@ class FlickIndex(App):
     CSS_PATH = "flickindex.tcss"
     BINDINGS = [
         ("q", "quit", "Quit Application"),
-        ("escape", "go_back", "Go Back")
+        ("escape", "go_back", "Go Back"),
+        ("backspace", "go_back", "Go Back")
     ]
 
     def action_go_back(self) -> None:

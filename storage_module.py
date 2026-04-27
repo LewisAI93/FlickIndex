@@ -153,3 +153,13 @@ def add_to_recently_viewed(movie):
     save_data()
 
     return True
+
+def is_favourite(movie_id):
+    """Checks if a movie ID exists in favourites."""
+    data = load_data()
+    return any(movie["id"] == movie_id for movie in data["favourites"])
+
+def is_in_watchlist(movie_id):
+    """Checks if a movie ID exists in the watchlist."""
+    data = load_data()
+    return any(movie["id"] == movie_id for movie in data["watchlist"])
